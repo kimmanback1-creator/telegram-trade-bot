@@ -300,6 +300,7 @@ async def show_statistics(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # 장기 매매일지
 # =========================
 async def swing_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    print("🚀 swing_start triggered:", update.message.text if update.message else None)
     chat_id = update.effective_chat.id
     try:
         await context.bot.delete_message(chat_id, update.message.message_id)
@@ -310,10 +311,12 @@ async def swing_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["bot_msgs"] = []
     msg = await update.message.reply_text("🕰 장기 매매일지: 무엇을 하시겠습니까?", reply_markup=reply_markup)
     context.user_data["bot_msgs"].append(msg.message_id)
+    print("swing_start finished, moved to L_MENU")
     return L_MENU
 
 # 장기 - 진입
 async def get_l_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    print("🚀 get_l_image triggered:", update.message.text if update.message else "No text")
     chat_id = update.effective_chat.id
     try:
         await context.bot.delete_message(chat_id, update.message.message_id)
@@ -321,50 +324,56 @@ async def get_l_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
         pass
     
     if not update.message.photo:
+        print("⚠️ get_l_image: No photo found, asking again")
         msg = await update.message.reply_text("이미지를 업로드해주세요.")
-        context.user_data.setdefault("bot_msgs", []).append(msg.message_id)   # ✅ 리스트에 추가
+        context.user_data.setdefault("bot_msgs", []).append(msg.message_id)   
         return L_IMAGE
 
     context.user_data["user_image_id"] = update.message.message_id
     
     photo = update.message.photo[-1]
     context.user_data["image_id"] = photo.file_id
+    print("✅ get_l_image: photo stored", context.user_data["image_id"])
     
     msg = await update.message.reply_text("종목을 입력하세요 (예: BTC)")
-    context.user_data.setdefault("bot_msgs", []).append(msg.message_id)       # ✅ 리스트에 추가
+    context.user_data.setdefault("bot_msgs", []).append(msg.message_id)       
     return L_SYMBOL
 
 
 async def get_l_symbol(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data["symbol"] = update.message.text   # ✅ 단일 값 저장
+    print("🚀 get_l_symbol triggered:", update.message.text)
+    context.user_data["symbol"] = update.message.text   
     
     # 유저메세지 삭제
     await context.bot.delete_message(update.effective_chat.id, update.message.message_id)
     
     msg = await update.message.reply_text("포지션을 입력하세요 (롱/숏)")
-    context.user_data.setdefault("bot_msgs", []).append(msg.message_id)       # ✅ 리스트에 추가
+    context.user_data.setdefault("bot_msgs", []).append(msg.message_id)       
     return L_SIDE
 
 
 async def get_l_side(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data["side"] = update.message.text     # ✅ 단일 값 저장
+    print("🚀 get_l_side triggered:", update.message.text)
+    context.user_data["side"] = update.message.text     
     await context.bot.delete_message(update.effective_chat.id, update.message.message_id)
     
     msg = await update.message.reply_text("배율을 입력하세요 (예: 1, 3, 5)")
-    context.user_data.setdefault("bot_msgs", []).append(msg.message_id)       # ✅ 리스트에 추가
+    context.user_data.setdefault("bot_msgs", []).append(msg.message_id)       
     return L_LEVERAGE
 
 
 async def get_l_leverage(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data["leverage"] = update.message.text  # ✅ 단일 값 저장
+    print("🚀 get_l_leverage triggered:", update.message.text)
+    context.user_data["leverage"] = update.message.text 
     await context.bot.delete_message(update.effective_chat.id, update.message.message_id)
     
     msg = await update.message.reply_text("진입가를 입력하세요 (예: 24500)")
-    context.user_data.setdefault("bot_msgs", []).append(msg.message_id)       # ✅ 리스트에 추가
+    context.user_data.setdefault("bot_msgs", []).append(msg.message_id)       
     return L_ENTRY_PRICE
 
 
 async def get_l_entry_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    print("🚀 get_l_entry_price triggered:", update.message.text)
     text = update.message.text.strip()
     try:
         entry_price = float(text)
@@ -384,7 +393,8 @@ async def get_l_entry_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def get_l_reason_entry(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data["reason_entry"] = update.message.text   # ✅ 단일 값 저장
+    print("🚀 get_l_reason_entry triggered:", update.message.text)
+    context.user_data["reason_entry"] = update.message.text   
     await context.bot.delete_message(update.effective_chat.id, update.message.message_id)
 
     user_id = update.message.from_user.id
@@ -654,6 +664,7 @@ async def webhook(request: Request):
     except Exception as e:
         print("❌ Webhook error:", e)
         return JSONResponse(content={"ok": False, "error": str(e)}, status_code=500)
+
 
 
 
