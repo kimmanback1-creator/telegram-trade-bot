@@ -9,10 +9,20 @@ from supabase import create_client
 TOKEN = os.getenv("BOT_TOKEN")
 url = os.getenv("SUPABASE_URL")
 key = os.getenv("SUPABASE_KEY")
-supabase = create_client(url, key)
 
-app = FastAPI()
+supabase = create_client(url, key)
 telegram_app = Application.builder().token(TOKEN).build()
+app = FastAPI()
+
+@app.on_event("startup")
+async def on_startup():
+    await telegram_app.initialize()
+    print("✅ Telegram Application initialized")
+
+@app.on_event("shutdown")
+async def on_shutdown():
+    await telegram_app.shutdown()
+    print("🛑 Telegram App Shutdown")
 
 @app.post("/webhook")
 async def webhook(request: Request):
@@ -630,6 +640,7 @@ def main():
     telegram_app.add_handler(MessageHandler(filters.Regex("📊 통계보기"), show_statistics))
 
     print("봇이 실행 중입니다...")
+
 
 
 
