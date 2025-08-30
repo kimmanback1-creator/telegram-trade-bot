@@ -575,7 +575,6 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 cancel_handler = MessageHandler(filters.Regex("❌ 취소 / 뒤로가기"), cancel)
 
 def main():
-    app = Application.builder().token(TOKEN).build()
     # 단타 핸들러
     conv_scalp = ConversationHandler(
         entry_points=[MessageHandler(filters.Regex("📓 일지작성\(단타\)"), scalping_start)],
@@ -628,5 +627,6 @@ def main():
     telegram_app.add_handler(MessageHandler(filters.Regex("📊 통계보기"), show_statistics))
 
     print("봇이 실행 중입니다...")
+
 
 
