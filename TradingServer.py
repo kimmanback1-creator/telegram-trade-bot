@@ -1,10 +1,20 @@
 import os
+from fastapi import FastAPI, Request
 from dotenv import load_dotenv
 from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, ConversationHandler, CallbackQueryHandler
 from datetime import datetime
 from supabase import create_client
 
+app = FastAPI()
+telegram_app = Application.builder().token(os.getenv("BOT_TOKEN")).build()
+
+@app.post("/webhook")
+async def webhook(request: Request):
+    data = await request.json()
+    update = Update.de_json(data, telegram_app.bot)
+    await telegram_app.process_update(update)
+    return {"ok": True}
 
 load_dotenv()
 TOKEN = os.getenv("BOT_TOKEN")
@@ -612,14 +622,11 @@ def main():
     ],
 )
 
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(conv_scalp)
-    app.add_handler(conv_long)
-    app.add_handler(MessageHandler(filters.Regex("📊 통계보기"), show_statistics))
+    telegram_app.add_handler(CommandHandler("start", start))
+    telegram_app.add_handler(conv_scalp)
+    telegram_app.add_handler(conv_long)
+    telegram_app.add_handler(MessageHandler(filters.Regex("📊 통계보기"), show_statistics))
 
     print("봇이 실행 중입니다...")
-    app.run_polling()
 
-if __name__ == "__main__":
-    main()
 
