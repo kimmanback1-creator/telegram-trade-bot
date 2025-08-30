@@ -14,35 +14,6 @@ supabase = create_client(url, key)
 telegram_app = Application.builder().token(TOKEN).build()
 app = FastAPI()
 
-telegram_app.add_handler(CommandHandler("start", start))
-telegram_app.add_handler(conv_scalp)
-telegram_app.add_handler(conv_long)
-telegram_app.add_handler(MessageHandler(filters.Regex("📊 통계보기"), show_statistics))
-
-@app.on_event("startup")
-async def on_startup():
-    await telegram_app.initialize()
-    await telegram_app.start()   # 👈 추가
-    print("✅ Telegram Application initialized & started")
-
-@app.on_event("shutdown")
-async def on_shutdown():
-    await telegram_app.stop()    # 👈 추가
-    await telegram_app.shutdown()
-    print("🛑 Telegram App stopped & shutdown")
-
-@app.post("/webhook")
-async def webhook(request: Request):
-    try:
-        data = await request.json()
-        update = Update.de_json(data, telegram_app.bot)
-        await telegram_app.process_update(update)
-    except Exception as e:
-        print("❌ Webhook error:", e)
-    # 항상 200 OK 반환
-    return {"ok": True}
-
-
 #전역 변수
 MAIN_MENU = [["📓 일지작성(단타)", "일지작성(장기)"], ["📊 통계보기", "❌ 취소"]]
 LONG_MENU = [["새 진입 기록", "청산하기"], ["❌ 취소 / 뒤로가기"]]
@@ -640,7 +611,36 @@ def main():
         CommandHandler("cancel", cancel)
     ],
 )
+
+telegram_app.add_handler(CommandHandler("start", start))
+telegram_app.add_handler(conv_scalp)
+telegram_app.add_handler(conv_long)
+telegram_app.add_handler(MessageHandler(filters.Regex("📊 통계보기"), show_statistics))
+
+@app.on_event("startup")
+async def on_startup():
+    await telegram_app.initialize()
+    await telegram_app.start()
+    print("✅ Telegram Application initialized & started")
+
+@app.on_event("shutdown")
+async def on_shutdown():
+    await telegram_app.stop()
+    await telegram_app.shutdown()
+    print("🛑 Telegram App stopped & shutdown")
+
+@app.post("/webhook")
+async def webhook(request: Request):
+    try:
+        data = await request.json()
+        update = Update.de_json(data, telegram_app.bot)
+        await telegram_app.process_update(update)
+    except Exception as e:
+        print("❌ Webhook error:", e)
+    return {"ok": True}
+    
     print("봇이 실행 중입니다...")
+
 
 
 
