@@ -5,6 +5,7 @@ from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKe
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, ConversationHandler, CallbackQueryHandler
 from datetime import datetime
 from supabase import create_client
+from fastapi.responses import JSONResponse
 
 TOKEN = os.getenv("BOT_TOKEN")
 url = os.getenv("SUPABASE_URL")
@@ -14,6 +15,10 @@ supabase = create_client(url, key)
 telegram_app = Application.builder().token(TOKEN).build()
 app = FastAPI()
 
+@app.get("/")
+async def root():
+    return {"status": "ok"}
+    
 #전역 변수
 MAIN_MENU = [["📓 일지작성(단타)", "일지작성(장기)"], ["📊 통계보기", "❌ 취소"]]
 LONG_MENU = [["새 진입 기록", "청산하기"], ["❌ 취소 / 뒤로가기"]]
@@ -22,10 +27,16 @@ LONG_MENU = [["새 진입 기록", "청산하기"], ["❌ 취소 / 뒤로가기"
 IMAGE, SYMBOL, SIDE, LEVERAGE, PNL, REASON = range(6)
 L_IMAGE, L_SYMBOL, L_SIDE, L_LEVERAGE, L_ENTRY_PRICE, L_REASON_ENTRY = range(6, 12)  # 장기 진입
 L_MENU, L_SELECT_TRADE, L_EXIT_PRICE, L_PNL, L_REASON_EXIT = range(12, 17)  # 장기 청산
-    
+
+def safe_supabase_call(query):
+    try:
+        return query.execute()
+    except Exception as e:
+        print("❌ Supabase error:", e)
+        return None
+
 # /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-   
     reply_markup = ReplyKeyboardMarkup(MAIN_MENU, resize_keyboard=True)
     await update.message.reply_text("환영합니다! 매매일지 봇입니다!", reply_markup=reply_markup)
 
@@ -225,18 +236,20 @@ async def show_statistics(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
 
     # 단타
-    response = supabase.table("scalping_trades").select("pnl_pct").eq("user_id", user_id).execute()
-    scalping_profits = [safe_float(row["pnl_pct"]) for row in response.data if row["pnl_pct"] is not None]
+    response = safe_supabase_call(
+        supabase.table("scalping_trades").select("pnl_pct").eq("user_id", user_id)
+    )
+    scalping_profits = [safe_float(row["pnl_pct"]) for row in response.data if row["pnl_pct"] is not None] if response else []
     scalping_profits = [p for p in scalping_profits if p is not None]
 
-    # 장기
-    response = supabase.table("swing_trades").select("pnl_pct, exit_price").eq("user_id", user_id).execute()
-    swing_profits = [safe_float(row["pnl_pct"]) for row in response.data if row["pnl_pct"] is not None]
+    response = safe_supabase_call(
+        supabase.table("swing_trades").select("pnl_pct, exit_price").eq("user_id", user_id)
+    )
+    swing_profits = [safe_float(row["pnl_pct"]) for row in response.data if row["pnl_pct"] is not None] if response else []
     swing_profits = [p for p in swing_profits if p is not None]
-    
-    # 장기 거래 - 청산된/미청산 구분
-    closed_trades = sum(1 for row in response.data if row["exit_price"] is not None)
-    open_trades   = sum(1 for row in response.data if row["exit_price"] is None)
+
+    closed_trades = sum(1 for row in (response.data if response else []) if row["exit_price"] is not None)
+    open_trades   = sum(1 for row in (response.data if response else []) if row["exit_price"] is None)
 
     # 전체
     all_profits = scalping_profits + swing_profits
@@ -619,14 +632,12 @@ telegram_app.add_handler(MessageHandler(filters.Regex("📊 통계보기"), show
 @app.on_event("startup")
 async def on_startup():
     await telegram_app.initialize()
-    await telegram_app.start()
-    print("✅ Telegram Application initialized & started")
+    print("✅ Telegram Application initialized")
 
 @app.on_event("shutdown")
 async def on_shutdown():
-    await telegram_app.stop()
     await telegram_app.shutdown()
-    print("🛑 Telegram App stopped & shutdown")
+    print("🛑 Telegram Application shutdown")
 
 @app.post("/webhook")
 async def webhook(request: Request):
@@ -634,11 +645,12 @@ async def webhook(request: Request):
         data = await request.json()
         update = Update.de_json(data, telegram_app.bot)
         await telegram_app.process_update(update)
+        return JSONResponse(content={"ok": True}, status_code=200)
     except Exception as e:
         print("❌ Webhook error:", e)
-    return {"ok": True}
-    
-    print("봇이 실행 중입니다...")
+        return JSONResponse(content={"ok": False, "error": str(e)}, status_code=500)
+
+
 
 
 
