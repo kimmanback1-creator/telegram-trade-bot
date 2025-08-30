@@ -419,15 +419,17 @@ async def get_l_reason_entry(update: Update, context: ContextTypes.DEFAULT_TYPE)
     date_now = datetime.now().strftime("%Y-%m-%d %H:%M")
 
     #DB
-    supabase.table("swing_trades").insert({
-    "user_id": user_id,
-    "image_id": image_id,
-    "symbol": symbol,
-    "side": side,
-    "leverage": leverage,
-    "entry_price": entry_price,
-    "reason_entry": reason_entry
-}).execute()
+    safe_supabase_call(
+        supabase.table("swing_trades").insert({
+            "user_id": user_id,
+            "image_id": image_id,
+            "symbol": symbol,
+            "side": side,
+            "leverage": leverage,
+            "entry_price": entry_price,
+            "reason_entry": reason_entry
+    })
+)
 
 
     for msg_id in context.user_data.get("bot_msgs", []):
@@ -605,35 +607,36 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("❌ 입력이 취소되었습니다. 메뉴에서 다시 시작하세요.", reply_markup=reply_markup)
     return ConversationHandler.END
 
-cancel_handler = MessageHandler(filters.Regex("❌ 취소 / 뒤로가기"), cancel)
+cancel_handler = MessageHandler(filters.Text(["❌ 취소", "❌ 취소 / 뒤로가기"]), cancel)
 
 
     # 단타 핸들러
 conv_scalp = ConversationHandler(
-    entry_points=[MessageHandler(filters.Regex("📓 일지작성\(단타\)"), scalping_start)],
+    entry_points=[MessageHandler(filters.Text(["📓 일지작성(단타)"]), scalping_start)],
     states={
         IMAGE: [MessageHandler(filters.PHOTO, get_image)],
-        SYMBOL: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex("❌ 취소"), get_symbol)],
-        SIDE: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex("❌ 취소"), get_side)],
-        LEVERAGE: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex("❌ 취소"), get_leverage)],
-        PNL: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex("❌ 취소"), get_pnl)],
-        REASON: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex("❌ 취소"), get_reason)],
+        SYMBOL: [cancel_handler, MessageHandler(filters.TEXT & ~filters.COMMAND, get_symbol)],
+        SIDE: [cancel_handler, MessageHandler(filters.TEXT & ~filters.COMMAND, get_side)],
+        LEVERAGE: [cancel_handler, MessageHandler(filters.TEXT & ~filters.COMMAND, get_leverage)],
+        PNL: [cancel_handler, MessageHandler(filters.TEXT & ~filters.COMMAND, get_pnl)],
+        REASON: [cancel_handler, MessageHandler(filters.TEXT & ~filters.COMMAND, get_reason)],
+
     },
     fallbacks=[
-        MessageHandler(filters.Regex("❌ 취소"), cancel),
+        cancel_handler,
         CommandHandler("cancel", cancel)
     ],
 )
 
 conv_long = ConversationHandler(
     entry_points=[
-        MessageHandler(filters.Regex(r"일지작성\(장기\)"), swing_start),
-        MessageHandler(filters.Regex(r"새 진입 기록"), get_l_image)
+        MessageHandler(filters.Text(["일지작성(장기)"]), swing_start),
+        MessageHandler(filters.Text(["새 진입 기록"]), get_l_image)
     ],
     states={
         L_MENU: [
-            MessageHandler(filters.Regex("새 진입 기록"), get_l_image),
-            MessageHandler(filters.Regex("청산하기"), swing_show_open_positions),
+            MessageHandler(filters.Text(["새 진입 기록"]), get_l_image),
+            MessageHandler(filters.Text(["청산하기"]), swing_show_open_positions),
             cancel_handler
         ],
         L_IMAGE: [cancel_handler, MessageHandler(filters.PHOTO, get_l_image)],
@@ -653,7 +656,7 @@ conv_long = ConversationHandler(
 )
 
 telegram_app.add_handler(CommandHandler("start", start))
-telegram_app.add_handler(MessageHandler(filters.Regex("📊 통계보기"), show_statistics))
+telegram_app.add_handler(MessageHandler(filters.Text(["📊 통계보기"]), show_statistics))
 telegram_app.add_handler(conv_scalp)
 telegram_app.add_handler(conv_long)
 
@@ -677,6 +680,7 @@ async def webhook(request: Request):
     except Exception as e:
         print("❌ Webhook error:", e)
         return JSONResponse(content={"ok": False, "error": str(e)}, status_code=500)
+
 
 
 
