@@ -6,21 +6,24 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 from datetime import datetime
 from supabase import create_client
 
-load_dotenv()
-app = FastAPI()
-telegram_app = Application.builder().token(os.getenv("BOT_TOKEN")).build()
-
-@app.post("/webhook")
-async def webhook(request: Request):
-    data = await request.json()
-    update = Update.de_json(data, telegram_app.bot)
-    await telegram_app.process_update(update)
-    return {"ok": True}
-
 TOKEN = os.getenv("BOT_TOKEN")
 url = os.getenv("SUPABASE_URL")
 key = os.getenv("SUPABASE_KEY")
 supabase = create_client(url, key)
+
+app = FastAPI()
+telegram_app = Application.builder().token(TOKEN).build()
+
+@app.post("/webhook")
+async def webhook(request: Request):
+    try:
+        data = await request.json()
+        update = Update.de_json(data, telegram_app.bot)
+        await telegram_app.process_update(update)
+    except Exception as e:
+        print("❌ Webhook error:", e)
+        return {"ok": False}
+    return {"ok": True}
 
 
 #전역 변수
@@ -627,6 +630,7 @@ def main():
     telegram_app.add_handler(MessageHandler(filters.Regex("📊 통계보기"), show_statistics))
 
     print("봇이 실행 중입니다...")
+
 
 
 
