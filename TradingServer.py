@@ -303,7 +303,7 @@ async def show_statistics(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # 장기 매매일지
 # =========================
 async def swing_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    print("🚀 swing_start triggered:", update.message.text if update.message else None)
+    print("🔥 swing_start 진입됨:", update.message.text)
     chat_id = update.effective_chat.id
     try:
         await context.bot.delete_message(chat_id, update.message.message_id)
@@ -627,8 +627,8 @@ conv_scalp = ConversationHandler(
 
 conv_long = ConversationHandler(
     entry_points=[
-        MessageHandler(filters.Regex("일지작성\(장기\)"), swing_start),
-        MessageHandler(filters.Regex("새 진입 기록"), get_l_image)
+        MessageHandler(filters.Regex(r"일지작성\(장기\)"), swing_start),
+        MessageHandler(filters.Regex(r"새 진입 기록"), get_l_image)
     ],
     states={
         L_MENU: [
@@ -677,6 +677,7 @@ async def webhook(request: Request):
     except Exception as e:
         print("❌ Webhook error:", e)
         return JSONResponse(content={"ok": False, "error": str(e)}, status_code=500)
+
 
 
 
