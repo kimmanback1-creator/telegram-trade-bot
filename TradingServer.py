@@ -563,29 +563,28 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = ReplyKeyboardMarkup(MAIN_MENU, resize_keyboard=True)
     await update.message.reply_text("❌ 입력이 취소되었습니다. 메뉴에서 다시 시작하세요.", reply_markup=reply_markup)
     return ConversationHandler.END
+
 cancel_handler = MessageHandler(filters.Regex("❌ 취소 / 뒤로가기"), cancel)
 
-def main():
-    # 단타 핸들러
-    conv_scalp = ConversationHandler(
-        entry_points=[MessageHandler(filters.Regex("📓 일지작성\(단타\)"), scalping_start)],
-        states={
-            IMAGE: [MessageHandler(filters.PHOTO, get_image)],
-            SYMBOL: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex("❌ 취소"), get_symbol)],
-            SIDE: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex("❌ 취소"), get_side)],
-            LEVERAGE: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex("❌ 취소"), get_leverage)],
-            PNL: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex("❌ 취소"), get_pnl)],
-            REASON: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex("❌ 취소"), get_reason)],
-        },
-        fallbacks=[
-            MessageHandler(filters.Regex("❌ 취소"), cancel),
-            CommandHandler("cancel", cancel)
-        ],
-    )
-    
-    #장기 핸들러
 
-    conv_long = ConversationHandler(
+    # 단타 핸들러
+conv_scalp = ConversationHandler(
+    entry_points=[MessageHandler(filters.Regex("📓 일지작성\(단타\)"), scalping_start)],
+    states={
+        IMAGE: [MessageHandler(filters.PHOTO, get_image)],
+        SYMBOL: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex("❌ 취소"), get_symbol)],
+        SIDE: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex("❌ 취소"), get_side)],
+        LEVERAGE: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex("❌ 취소"), get_leverage)],
+        PNL: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex("❌ 취소"), get_pnl)],
+        REASON: [MessageHandler(filters.TEXT & ~filters.COMMAND & ~filters.Regex("❌ 취소"), get_reason)],
+    },
+    fallbacks=[
+        MessageHandler(filters.Regex("❌ 취소"), cancel),
+        CommandHandler("cancel", cancel)
+    ],
+)
+
+conv_long = ConversationHandler(
     entry_points=[
         MessageHandler(filters.Regex("일지작성\(장기\)"), swing_start),
         MessageHandler(filters.Regex("새 진입 기록"), get_l_image)
@@ -640,6 +639,7 @@ async def webhook(request: Request):
     return {"ok": True}
     
     print("봇이 실행 중입니다...")
+
 
 
 
