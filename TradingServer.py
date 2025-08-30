@@ -14,15 +14,22 @@ supabase = create_client(url, key)
 telegram_app = Application.builder().token(TOKEN).build()
 app = FastAPI()
 
+telegram_app.add_handler(CommandHandler("start", start))
+telegram_app.add_handler(conv_scalp)
+telegram_app.add_handler(conv_long)
+telegram_app.add_handler(MessageHandler(filters.Regex("📊 통계보기"), show_statistics))
+
 @app.on_event("startup")
 async def on_startup():
     await telegram_app.initialize()
-    print("✅ Telegram Application initialized")
+    await telegram_app.start()   # 👈 추가
+    print("✅ Telegram Application initialized & started")
 
 @app.on_event("shutdown")
 async def on_shutdown():
+    await telegram_app.stop()    # 👈 추가
     await telegram_app.shutdown()
-    print("🛑 Telegram App Shutdown")
+    print("🛑 Telegram App stopped & shutdown")
 
 @app.post("/webhook")
 async def webhook(request: Request):
@@ -32,7 +39,7 @@ async def webhook(request: Request):
         await telegram_app.process_update(update)
     except Exception as e:
         print("❌ Webhook error:", e)
-        return {"ok": False}
+    # 항상 200 OK 반환
     return {"ok": True}
 
 
@@ -633,13 +640,8 @@ def main():
         CommandHandler("cancel", cancel)
     ],
 )
-
-    telegram_app.add_handler(CommandHandler("start", start))
-    telegram_app.add_handler(conv_scalp)
-    telegram_app.add_handler(conv_long)
-    telegram_app.add_handler(MessageHandler(filters.Regex("📊 통계보기"), show_statistics))
-
     print("봇이 실행 중입니다...")
+
 
 
 
