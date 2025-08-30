@@ -15,9 +15,10 @@ supabase = create_client(url, key)
 telegram_app = Application.builder().token(TOKEN).build()
 app = FastAPI()
 
-@app.get("/")
+@app.api_route("/", methods=["GET", "HEAD"])
 async def root():
     return {"status": "ok"}
+
     
 #전역 변수
 MAIN_MENU = [["📓 일지작성(단타)", "일지작성(장기)"], ["📊 통계보기", "❌ 취소"]]
@@ -649,6 +650,7 @@ async def webhook(request: Request):
     except Exception as e:
         print("❌ Webhook error:", e)
         return JSONResponse(content={"ok": False, "error": str(e)}, status_code=500)
+
 
 
 
