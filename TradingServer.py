@@ -6,6 +6,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 from datetime import datetime
 from supabase import create_client
 
+load_dotenv()
 app = FastAPI()
 telegram_app = Application.builder().token(os.getenv("BOT_TOKEN")).build()
 
@@ -16,7 +17,6 @@ async def webhook(request: Request):
     await telegram_app.process_update(update)
     return {"ok": True}
 
-load_dotenv()
 TOKEN = os.getenv("BOT_TOKEN")
 url = os.getenv("SUPABASE_URL")
 key = os.getenv("SUPABASE_KEY")
@@ -627,6 +627,7 @@ def main():
     telegram_app.add_handler(MessageHandler(filters.Regex("📊 통계보기"), show_statistics))
 
     print("봇이 실행 중입니다...")
+
 
 
 
