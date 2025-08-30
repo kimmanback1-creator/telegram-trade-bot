@@ -455,9 +455,13 @@ async def swing_show_open_positions(update: Update, context: ContextTypes.DEFAUL
         return ConversationHandler.END
 
     keyboard = [
-        [InlineKeyboardButton(f"{symbol} {side} @ {entry}", callback_data=str(trade_id))]
-        for trade_id, symbol, side, entry in rows
-    ]
+    [InlineKeyboardButton(
+        f"{row.get('symbol', 'N/A')} {row.get('side', 'N/A')} @ {row.get('entry_price', '0')}",
+        callback_data=str(row['trade_id'])
+    )]
+    for row in rows
+]
+
     reply_markup = InlineKeyboardMarkup(keyboard)
     msg = await update.message.reply_text("📑 [열린 포지션 목록]\n청산할 포지션을 선택하세요:", reply_markup=reply_markup)
     context.user_data.setdefault("bot_msgs", []).append(msg.message_id)
@@ -650,6 +654,7 @@ async def webhook(request: Request):
     except Exception as e:
         print("❌ Webhook error:", e)
         return JSONResponse(content={"ok": False, "error": str(e)}, status_code=500)
+
 
 
 
