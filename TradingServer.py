@@ -367,7 +367,16 @@ async def get_l_side(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def get_l_leverage(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print("🚀 get_l_leverage triggered:", update.message.text)
-    context.user_data["leverage"] = update.message.text 
+    text = update.message.text.strip()
+    try:
+        leverage = float(text)
+        if leverage <= 0:
+            raise ValueError
+    except ValueError:
+        msg = await update.message.reply_text("❌ 배율은 0보다 큰 숫자로 입력해주세요 (예: 1, 3, 5)")
+        context.user_data.setdefault("bot_msgs", []).append(msg.message_id)
+        return L_LEVERAGE
+    context.user_data["leverage"] = leverage
     await context.bot.delete_message(update.effective_chat.id, update.message.message_id)
     
     msg = await update.message.reply_text("진입가를 입력하세요 (예: 24500)")
@@ -668,6 +677,7 @@ async def webhook(request: Request):
     except Exception as e:
         print("❌ Webhook error:", e)
         return JSONResponse(content={"ok": False, "error": str(e)}, status_code=500)
+
 
 
 
