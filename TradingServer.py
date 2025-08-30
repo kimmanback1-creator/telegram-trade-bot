@@ -38,11 +38,13 @@ def safe_supabase_call(query):
 
 # /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    print(f"👤 {update.effective_user.id} -> /start (메인메뉴 진입)")
     reply_markup = ReplyKeyboardMarkup(MAIN_MENU, resize_keyboard=True)
     await update.message.reply_text("환영합니다! 매매일지 봇입니다!", reply_markup=reply_markup)
 
 # 단타 기록 시작
 async def scalping_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    print(f"👤 {update.effective_user.id} -> 단타 일지작성 시작")
     chat_id = update.effective_chat.id
     try:
         await context.bot.delete_message(chat_id, update.message.message_id)
@@ -228,6 +230,7 @@ def safe_float(value):
 # 통계보기
 # =========================
 async def show_statistics(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    print(f"👤 {update.effective_user.id} -> 통계보기 요청")
     chat_id = update.effective_chat.id
     try:
         await context.bot.delete_message(chat_id, update.message.message_id)
@@ -295,7 +298,7 @@ async def show_statistics(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     await update.message.reply_text(stats_message, parse_mode="HTML")
-    
+    return ConversationHandler.END
 # =========================
 # 장기 매매일지
 # =========================
@@ -316,7 +319,7 @@ async def swing_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # 장기 - 진입
 async def get_l_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    print("🚀 get_l_image triggered:", update.message.text if update.message else "No text")
+    print(f"👤 {update.effective_user.id} -> 장기 새 진입 시작 (이미지 대기)")
     chat_id = update.effective_chat.id
     try:
         await context.bot.delete_message(chat_id, update.message.message_id)
@@ -450,6 +453,7 @@ async def get_l_reason_entry(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 # 장기 - 청산 (버튼 방식)
 async def swing_show_open_positions(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    print(f"👤 {update.effective_user.id} -> 장기 청산하기 버튼 클릭")
     chat_id = update.effective_chat.id
     try:
         await context.bot.delete_message(chat_id, update.message.message_id)
@@ -640,9 +644,9 @@ conv_long = ConversationHandler(
 )
 
 telegram_app.add_handler(CommandHandler("start", start))
+telegram_app.add_handler(MessageHandler(filters.Regex("📊 통계보기"), show_statistics))
 telegram_app.add_handler(conv_scalp)
 telegram_app.add_handler(conv_long)
-telegram_app.add_handler(MessageHandler(filters.Regex("📊 통계보기"), show_statistics))
 
 @app.on_event("startup")
 async def on_startup():
@@ -664,6 +668,7 @@ async def webhook(request: Request):
     except Exception as e:
         print("❌ Webhook error:", e)
         return JSONResponse(content={"ok": False, "error": str(e)}, status_code=500)
+
 
 
 
