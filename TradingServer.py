@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, ConversationHandler, CallbackQueryHandler
 from datetime import datetime, time
+from zoneinfo import ZoneInfo
 from supabase import create_client
 from fastapi.responses import JSONResponse
 from reporting import send_report
@@ -682,13 +683,25 @@ telegram_app.add_handler(MessageHandler(filters.Text(["📊 통계보기"]), sho
 telegram_app.add_handler(conv_scalp)
 telegram_app.add_handler(conv_long)
 
+KST = ZoneInfo("Asia/Seoul")
+
 async def safe_send_report(ctx, period):
     try:
         await send_report(ctx.application.bot, period)
         print(f"✅ {period} 리포트 전송 완료")
     except Exception as e:
         print(f"❌ {period} 리포트 실패:", e)
-        
+
+async def weekly_report(ctx):
+    now = datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[DEBUG] Weekly job triggered at {now} (KST)")
+    await safe_send_report(ctx, "week")
+
+async def monthly_report(ctx):
+    now = datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[DEBUG] Monthly job triggered at {now} (KST)")
+    await safe_send_report(ctx, "month")
+    
 @app.on_event("startup")
 async def on_startup():
     await telegram_app.initialize()
@@ -698,19 +711,21 @@ async def on_startup():
     job_queue.start()
     
     job_queue.run_daily(
-        lambda ctx: safe_send_report(ctx, "week"),
-        time=time(hour=15, minute=15),
-        days=(0,1,2,3,4,5,6)   
+        weekly_report,
+        time=time(hour=0, minute=40, tzinfo=KST),
+        days=(0,1,2,3,4,5,6),
+        name="weekly_report"   
     )
 
     
     job_queue.run_monthly(
-        lambda ctx: safe_send_report(ctx, "month"),
-        when=time(hour=15, minute=10),
-        day=1
+        monthly_report,
+        when=time(hour=22, minute=0, tzinfo=KST),
+        day=1,
+        name="monthly_report"
     )
 
-    
+    print("[DEBUG] Jobs registered:", job_queue.jobs())
     #await send_report(telegram_app.bot, period="week")
     #await send_report(telegram_app.bot, period="month")
     
@@ -729,6 +744,7 @@ async def webhook(request: Request):
     except Exception as e:
         print("❌ Webhook error:", e)
         return JSONResponse(content={"ok": False, "error": str(e)}, status_code=500)
+
 
 
 
