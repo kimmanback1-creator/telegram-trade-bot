@@ -38,7 +38,8 @@ def safe_supabase_call(query):
 
 # /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    print(f"👤 {update.effective_user.id} -> /start (메인메뉴 진입)")
+    #print(f"👤 {update.effective_user.id} -> /start (메인메뉴 진입)")
+    print("Chat ID:", update.effective_chat.id)
     reply_markup = ReplyKeyboardMarkup(MAIN_MENU, resize_keyboard=True)
     await update.message.reply_text("환영합니다! 매매일지 봇입니다!", reply_markup=reply_markup)
 
@@ -680,6 +681,7 @@ async def webhook(request: Request):
     except Exception as e:
         print("❌ Webhook error:", e)
         return JSONResponse(content={"ok": False, "error": str(e)}, status_code=500)
+
 
 
 
