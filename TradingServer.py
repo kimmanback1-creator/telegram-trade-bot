@@ -7,7 +7,7 @@ from datetime import datetime, time
 from supabase import create_client
 from fastapi.responses import JSONResponse
 from reporting import send_report
-
+import random
 
 TOKEN = os.getenv("BOT_TOKEN")
 url = os.getenv("SUPABASE_URL")
@@ -20,8 +20,26 @@ app = FastAPI()
 @app.api_route("/", methods=["GET", "HEAD"])
 async def root():
     return {"status": "ok"}
-
     
+# ====== 별칭 생성기 ======
+ADJECTIVES = ["불타는", "날쌘", "예리한", "강인한", "차가운", "뜨거운", "빠른", "은밀한", "화끈한", "거대한", "섹시한", "냉정한", "영리한", "잔혹한", "고독한", "거친", "맹렬한", "전설의", "저주받은", "깜찍한", "엉뚱한", "상큼한", "도도한", "노련한"]
+ANIMALS = ["곰", "호랑이", "코브라", "매", "황소", "늑대", "독수리", "상어", "팬더", "사자", "부엉이", "고양이", "아깽이", "강아지", "개미", "불개미", "벌꿀오소리", "얼룩말", "캥거루", "침팬치", "여우", "고래", "돌고래", "해파리", "펭귄", "물개", "까마귀", "앵무새", "공작새", "참새", "악어", "도마뱀", "개구리", "장수말벌", "풍뎅이"]
+
+def generate_alias(user_id: int) -> str:
+    last4 = str(user_id)[-4:]
+    adj = random.choice(ADJECTIVES)
+    animal = random.choice(ANIMALS)
+    return f"{adj}{animal}-{last4}"
+    
+def get_or_create_alias(user_id: int):
+    response = supabase.table("user_alias").select("alias").eq("user_id", user_id).execute()
+    if response.data:
+        return response.data[0]["alias"]
+
+    alias = generate_alias(user_id)
+    supabase.table("user_alias").insert({"user_id": user_id, "alias": alias}).execute()
+    return alias
+
 #전역 변수
 MAIN_MENU = [["📓 일지작성(단타)", "일지작성(장기)"], ["📊 통계보기", "❌ 취소"]]
 LONG_MENU = [["새 진입 기록", "청산하기"], ["❌ 취소 / 뒤로가기"]]
@@ -40,10 +58,11 @@ def safe_supabase_call(query):
 
 # /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    #print(f"👤 {update.effective_user.id} -> /start (메인메뉴 진입)")
     print("Chat ID:", update.effective_chat.id)
+    user_id = update.effective_user.id
+    alias = get_or_create_alias(user_id)
     reply_markup = ReplyKeyboardMarkup(MAIN_MENU, resize_keyboard=True)
-    await update.message.reply_text("환영합니다! 매매일지 봇입니다!", reply_markup=reply_markup)
+    await update.message.reply_text(f"환영합니다! 매매일지 봇입니다!\n"f"👉 당신의 고유 별칭 <b>{alias}</b> 입니다.\n"f"리포트에서 동일한 별칭으로 표시됩니다.", reply_markup=reply_markup, parse_mode="HTML")
 
 # 단타 기록 시작
 async def scalping_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -697,6 +716,7 @@ async def webhook(request: Request):
     except Exception as e:
         print("❌ Webhook error:", e)
         return JSONResponse(content={"ok": False, "error": str(e)}, status_code=500)
+
 
 
 
