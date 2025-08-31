@@ -107,9 +107,9 @@ def generate_charts(all_trades):
 # ====== 메시지 포맷 ======
 def format_message(period, stats_scalp, stats_swing, stats_total, ranking, all_trades):
     msg = f"📊 <b>{period.upper()} 리포트</b>\n\n"
-    msg += f"📓 단타: {stats_scalp['count']}건, 승률 {stats_scalp['win_rate']:.1f}%, 누적 {stats_scalp['total']:.1f}%\n"
-    msg += f"🕰 장기: {stats_swing['count']}건, 승률 {stats_swing['win_rate']:.1f}%, 누적 {stats_swing['total']:.1f}%\n"
-    msg += f"📊 전체: {stats_total['count']}건, 승률 {stats_total['win_rate']:.1f}%, 누적 {stats_total['total']:.1f}%\n\n"
+    msg += f"단타: {stats_scalp['count']}건, 승률 {stats_scalp['win_rate']:.1f}%, 누적 {stats_scalp['total']:.1f}%\n"
+    msg += f"장기: {stats_swing['count']}건, 승률 {stats_swing['win_rate']:.1f}%, 누적 {stats_swing['total']:.1f}%\n"
+    msg += f"전체: {stats_total['count']}건, 승률 {stats_total['win_rate']:.1f}%, 누적 {stats_total['total']:.1f}%\n\n"
     
     long_cnt = len([t for t in all_trades if t.get("side") == "롱"])
     short_cnt = len([t for t in all_trades if t.get("side") == "숏"])
@@ -128,8 +128,8 @@ def format_message(period, stats_scalp, stats_swing, stats_total, ranking, all_t
     else:
         scalp_ratio = swing_ratio = 0
 
-    msg += f"⚖️ 롱/숏 비율 → 롱 {long_ratio:.1f}%, 숏 {short_ratio:.1f}%\n"
-    msg += f"📈 단타/장기 비율 → 단타 {scalp_ratio:.1f}%, 장기 {swing_ratio:.1f}%\n\n"
+    msg += f"롱/숏 비율 → 롱 {long_ratio:.1f}%, 숏 {short_ratio:.1f}%\n"
+    msg += f"단타/장기 비율 → 단타 {scalp_ratio:.1f}%, 장기 {swing_ratio:.1f}%\n\n"
     msg += "🏆 랭킹:\n"
     
     for i, (alias, total, avg, cnt) in enumerate(ranking, 1):
@@ -155,6 +155,7 @@ async def send_report(bot, period="week"):
 
     await bot.send_message(CHANNEL_ID, msg, parse_mode="HTML")
     await bot.send_photo(CHANNEL_ID, InputFile(chart, filename="report.png"))
+
 
 
 
