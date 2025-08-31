@@ -6,6 +6,8 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 from datetime import datetime
 from supabase import create_client
 from fastapi.responses import JSONResponse
+from reporting import send_report
+from telegram.ext import Application
 
 TOKEN = os.getenv("BOT_TOKEN")
 url = os.getenv("SUPABASE_URL")
@@ -665,6 +667,18 @@ telegram_app.add_handler(conv_long)
 async def on_startup():
     await telegram_app.initialize()
     print("✅ Telegram Application initialized")
+    
+    telegram_app.job_queue.run_daily(
+        lambda ctx: send_report(telegram_app, period="week"),
+        time=datetime.time(hour=22, minute=0),  # 매일 22시, 주간은 일요일만
+        days=(6,)  # 일요일 (0=월)
+    )
+
+    telegram_app.job_queue.run_monthly(
+        lambda ctx: send_report(telegram_app, period="month"),
+        when=1,  # 매월 1일
+        time=datetime.time(hour=22, minute=0)
+    )
 
 @app.on_event("shutdown")
 async def on_shutdown():
@@ -681,6 +695,7 @@ async def webhook(request: Request):
     except Exception as e:
         print("❌ Webhook error:", e)
         return JSONResponse(content={"ok": False, "error": str(e)}, status_code=500)
+
 
 
 
