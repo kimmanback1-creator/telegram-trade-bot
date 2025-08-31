@@ -727,11 +727,11 @@ async def on_startup():
     )
 
     for job in job_queue.jobs():
-    aps_job = getattr(job, "aps_job", None)
-    if aps_job:
-        print(f"[DEBUG] Job registered: {job.name}, next_run_time={aps_job.next_run_time}")
-    else:
-        print(f"[DEBUG] Job registered: {job.name}, next_run_time=Unknown")
+        aps_job = getattr(job, "aps_job", None)
+        if aps_job:
+            print(f"[DEBUG] Job registered: {job.name}, next_run_time={aps_job.next_run_time}")
+        else:
+            print(f"[DEBUG] Job registered: {job.name}, next_run_time=Unknown")
 
     #await send_report(telegram_app.bot, period="week")
     #await send_report(telegram_app.bot, period="month")
@@ -751,6 +751,7 @@ async def webhook(request: Request):
     except Exception as e:
         print("❌ Webhook error:", e)
         return JSONResponse(content={"ok": False, "error": str(e)}, status_code=500)
+
 
 
 
