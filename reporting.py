@@ -76,7 +76,12 @@ def calc_ranking(all_trades, top_n=3):
     for uid, pnls in user_stats.items():
         total = sum(pnls)
         avg = total / len(pnls)
-        ranking.append((uid, total, avg, len(pnls)))
+        alias_resp = supabase.table("user_alias").select("alias").eq("user_id", uid).execute()
+        if alias_resp.data and len(alias_resp.data) > 0:
+            alias = alias_resp.data[0]["alias"]
+        else:
+            alias = f"유저{uid}"  # fallback
+        ranking.append((alias, total, avg, len(pnls)))
 
     ranking.sort(key=lambda x: x[1], reverse=True)  # 누적 손익률 순
     return ranking[:top_n]
@@ -106,8 +111,8 @@ def format_message(period, stats_scalp, stats_swing, stats_total, ranking):
     msg += f"🕰 장기: {stats_swing['count']}건, 승률 {stats_swing['win_rate']:.1f}%, 누적 {stats_swing['total']:.1f}%\n"
     msg += f"📊 전체: {stats_total['count']}건, 승률 {stats_total['win_rate']:.1f}%, 누적 {stats_total['total']:.1f}%\n\n"
     msg += "🏆 랭킹:\n"
-    for i, (uid, total, avg, cnt) in enumerate(ranking, 1):
-        msg += f"{i}. 유저 {uid} → {total:.1f}% (평균손익률{avg:.1f}%, {cnt}건)\n"
+    for i, (alias, total, avg, cnt) in enumerate(ranking, 1):
+        msg += f"{i}. {alias} → {total:.1f}% (평균손익률 {avg:.1f}%, {cnt}건)\n"
     return msg
 
 # ====== 리포트 전송 ======
@@ -129,4 +134,5 @@ async def send_report(bot, period="week"):
 
     await bot.send_message(CHANNEL_ID, msg, parse_mode="HTML")
     await bot.send_photo(CHANNEL_ID, InputFile(chart, filename="report.png"))
+
 
