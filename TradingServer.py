@@ -699,15 +699,15 @@ async def on_startup():
     
     job_queue.run_daily(
         lambda ctx: safe_send_report(ctx, "week"),
-        time=time(hour=15, minute=10),
-        #days=(0,)   
+        time=time(hour=15, minute=15),
+        days=(0,1,2,3,4,5,6)   
     )
 
     
     job_queue.run_monthly(
         lambda ctx: safe_send_report(ctx, "month"),
         when=time(hour=15, minute=10),
-        #day=1
+        day=1
     )
 
     
@@ -729,6 +729,7 @@ async def webhook(request: Request):
     except Exception as e:
         print("❌ Webhook error:", e)
         return JSONResponse(content={"ok": False, "error": str(e)}, status_code=500)
+
 
 
 
