@@ -700,8 +700,8 @@ async def on_startup():
     when=time(hour=22, minute=0),
     day=1
 )
-    await send_report(telegram_app.bot, period="week")
-    await send_report(telegram_app.bot, period="month")
+    #await send_report(telegram_app.bot, period="week")
+    #await send_report(telegram_app.bot, period="month")
     
 @app.on_event("shutdown")
 async def on_shutdown():
@@ -718,6 +718,7 @@ async def webhook(request: Request):
     except Exception as e:
         print("❌ Webhook error:", e)
         return JSONResponse(content={"ok": False, "error": str(e)}, status_code=500)
+
 
 
 
