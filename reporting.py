@@ -107,7 +107,7 @@ def format_message(period, stats_scalp, stats_swing, stats_total, ranking):
     msg += f"📊 전체: {stats_total['count']}건, 승률 {stats_total['win_rate']:.1f}%, 누적 {stats_total['total']:.1f}%\n\n"
     msg += "🏆 랭킹:\n"
     for i, (uid, total, avg, cnt) in enumerate(ranking, 1):
-        msg += f"{i}. 유저 {uid} → {total:.1f}% (평균 {avg:.1f}%, {cnt}건)\n"
+        msg += f"{i}. 유저 {uid} → {total:.1f}% (평균손익률{avg:.1f}%, {cnt}건)\n"
     return msg
 
 # ====== 리포트 전송 ======
@@ -129,3 +129,4 @@ async def send_report(bot, period="week"):
 
     await bot.send_message(CHANNEL_ID, msg, parse_mode="HTML")
     await bot.send_photo(CHANNEL_ID, InputFile(chart, filename="report.png"))
+
