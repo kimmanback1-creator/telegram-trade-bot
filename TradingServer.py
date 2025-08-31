@@ -713,7 +713,7 @@ async def on_startup():
     
     job_queue.run_daily(
         weekly_report,
-        time=time(hour=0, minute=50, tzinfo=KST),
+        time=time(hour=0, minute=53, tzinfo=KST),
         days=(0,1,2,3,4,5,6),
         name="weekly_report"   
     )
@@ -751,6 +751,7 @@ async def webhook(request: Request):
     except Exception as e:
         print("❌ Webhook error:", e)
         return JSONResponse(content={"ok": False, "error": str(e)}, status_code=500)
+
 
 
 
