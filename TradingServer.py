@@ -15,7 +15,6 @@ key = os.getenv("SUPABASE_KEY")
 
 supabase = create_client(url, key)
 telegram_app = Application.builder().token(TOKEN).build()
-job_queue = telegram_app.job_queue
 app = FastAPI()
 
 @app.api_route("/", methods=["GET", "HEAD"])
@@ -668,6 +667,8 @@ telegram_app.add_handler(conv_long)
 async def on_startup():
     await telegram_app.initialize()
     print("✅ Telegram Application initialized")
+
+    job_queue = telegram_app.job_queue
     
     job_queue.run_daily(
         lambda ctx: send_report(telegram_app.bot, period="week"),
@@ -696,6 +697,7 @@ async def webhook(request: Request):
     except Exception as e:
         print("❌ Webhook error:", e)
         return JSONResponse(content={"ok": False, "error": str(e)}, status_code=500)
+
 
 
 
