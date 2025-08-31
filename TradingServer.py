@@ -688,21 +688,21 @@ async def on_startup():
     print("✅ Telegram Application initialized")
 
     job_queue = telegram_app.job_queue
-    
-    job_queue.run_daily(
-        lambda ctx: send_report(telegram_app.bot, period="week"),
-        time=time(hour=14, minute=30), 
-        days=(0,)  
-    )
-
-    job_queue.run_monthly(
-        lambda ctx: send_report(telegram_app.bot, period="month"),
-        when=time(hour=14, minute=30),
-        day=1
-    )
-
     job_queue.start()
     print("✅ JobQueue started")
+    
+    async def weekly_callback(ctx):
+        print("🔥 weekly job triggered")
+        await send_report(telegram_app.bot, period="week")
+
+    async def monthly_callback(ctx):
+        print("🔥 monthly job triggered")
+        await send_report(telegram_app.bot, period="month")
+
+    job_queue.run_daily(weekly_callback, time=time(hour=14, minute=45), days=(0,))
+    job_queue.run_monthly(monthly_callback, when=time(hour=14, minute=45), day=1)
+
+    
     #await send_report(telegram_app.bot, period="week")
     #await send_report(telegram_app.bot, period="month")
     
@@ -721,6 +721,7 @@ async def webhook(request: Request):
     except Exception as e:
         print("❌ Webhook error:", e)
         return JSONResponse(content={"ok": False, "error": str(e)}, status_code=500)
+
 
 
 
