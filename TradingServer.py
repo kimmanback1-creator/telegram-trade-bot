@@ -696,10 +696,13 @@ async def on_startup():
     )
 
     job_queue.run_monthly(
-    lambda ctx: send_report(telegram_app.bot, period="month"),
-    when=time(hour=14, minute=0),
-    day=1
-)
+        lambda ctx: send_report(telegram_app.bot, period="month"),
+        when=time(hour=14, minute=0),
+        day=1
+    )
+
+    job_queue.start()
+    print("✅ JobQueue started")
     #await send_report(telegram_app.bot, period="week")
     #await send_report(telegram_app.bot, period="month")
     
@@ -718,6 +721,7 @@ async def webhook(request: Request):
     except Exception as e:
         print("❌ Webhook error:", e)
         return JSONResponse(content={"ok": False, "error": str(e)}, status_code=500)
+
 
 
 
