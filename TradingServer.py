@@ -682,6 +682,13 @@ telegram_app.add_handler(MessageHandler(filters.Text(["📊 통계보기"]), sho
 telegram_app.add_handler(conv_scalp)
 telegram_app.add_handler(conv_long)
 
+async def safe_send_report(ctx, period):
+    try:
+        await send_report(ctx.application.bot, period)
+        print(f"✅ {period} 리포트 전송 완료")
+    except Exception as e:
+        print(f"❌ {period} 리포트 실패:", e)
+        
 @app.on_event("startup")
 async def on_startup():
     await telegram_app.initialize()
@@ -689,18 +696,19 @@ async def on_startup():
 
     job_queue = telegram_app.job_queue
     job_queue.start()
-    print("✅ JobQueue started")
     
-    async def weekly_callback(ctx):
-        print("🔥 weekly job triggered")
-        await send_report(telegram_app.bot, period="week")
+    job_queue.run_daily(
+        lambda ctx: safe_send_report(ctx, "week"),
+        time=time(hour=15, minute=0),
+        days=(0,)   # 0 = 월요일, 6 = 일요일 (PTB 기준)
+    )
 
-    async def monthly_callback(ctx):
-        print("🔥 monthly job triggered")
-        await send_report(telegram_app.bot, period="month")
-
-    job_queue.run_daily(weekly_callback, time=time(hour=14, minute=45), days=(0,))
-    job_queue.run_monthly(monthly_callback, when=time(hour=14, minute=45), day=1)
+    
+    job_queue.run_monthly(
+        lambda ctx: safe_send_report(ctx, "month"),
+        when=time(hour=14, minute=0),
+        day=1
+    )
 
     
     #await send_report(telegram_app.bot, period="week")
@@ -721,6 +729,7 @@ async def webhook(request: Request):
     except Exception as e:
         print("❌ Webhook error:", e)
         return JSONResponse(content={"ok": False, "error": str(e)}, status_code=500)
+
 
 
 
