@@ -708,11 +708,12 @@ async def on_startup():
     print("✅ Telegram Application initialized")
 
     job_queue = telegram_app.job_queue
+    job_queue.scheduler.configure(timezone=KST)
     job_queue.start()
     
     job_queue.run_daily(
         weekly_report,
-        time=time(hour=0, minute=40, tzinfo=KST),
+        time=time(hour=0, minute=50, tzinfo=KST),
         days=(0,1,2,3,4,5,6),
         name="weekly_report"   
     )
@@ -725,7 +726,8 @@ async def on_startup():
         name="monthly_report"
     )
 
-    print("[DEBUG] Jobs registered:", job_queue.jobs())
+    for job in job_queue.jobs():
+        print(f"[DEBUG] Job registered: {job.name}, next_run_time={job.next_t}")
     #await send_report(telegram_app.bot, period="week")
     #await send_report(telegram_app.bot, period="month")
     
@@ -744,6 +746,7 @@ async def webhook(request: Request):
     except Exception as e:
         print("❌ Webhook error:", e)
         return JSONResponse(content={"ok": False, "error": str(e)}, status_code=500)
+
 
 
 
