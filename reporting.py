@@ -14,6 +14,13 @@ url = os.getenv("SUPABASE_URL")
 key = os.getenv("SUPABASE_KEY")
 supabase = create_client(url, key)
 
+# ====== 폰트 적용 ======
+font_path = "font/NanumGothic-Regular.ttf"
+font_prop = font_manager.FontProperties(fname=font_path)
+rcParams['font.family'] = font_prop.get_name()  
+rcParams['axes.unicode_minus'] = False
+print(f"[INFO] Matplotlib font set to: {font_prop.get_name()}")
+
 # ====== 통계 계산 ======
 def calc_stats(profits):
     if not profits:
@@ -155,6 +162,7 @@ async def send_report(bot, period="week"):
 
     await bot.send_message(CHANNEL_ID, msg, parse_mode="HTML")
     await bot.send_photo(CHANNEL_ID, InputFile(chart, filename="report.png"))
+
 
 
 
