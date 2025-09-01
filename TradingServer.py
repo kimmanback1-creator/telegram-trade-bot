@@ -716,7 +716,7 @@ async def on_startup():
     
     job_queue.run_daily(
         weekly_report,
-        time=time(hour=0, minute=56, tzinfo=KST),
+        time=time(hour=22, minute=0, tzinfo=KST),
         days=(0,1,2,3,4,5,6),
         name="weekly_report"   
     )
@@ -736,7 +736,7 @@ async def on_startup():
         else:
             print(f"[DEBUG] Job registered: {job.name}, next_run_time=Unknown")
 
-    await send_report(telegram_app.bot, period="week")
+    #await send_report(telegram_app.bot, period="week")
     #await send_report(telegram_app.bot, period="month")
     
 @app.on_event("shutdown")
@@ -754,6 +754,7 @@ async def webhook(request: Request):
     except Exception as e:
         print("❌ Webhook error:", e)
         return JSONResponse(content={"ok": False, "error": str(e)}, status_code=500)
+
 
 
 
