@@ -1,6 +1,7 @@
 # reporting.py
 import os
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInf
 import matplotlib.pyplot as plt
 from matplotlib import font_manager, rcParams
 from io import BytesIO
@@ -57,7 +58,8 @@ def calc_stats(profits):
 
 # ====== 데이터 조회 ======
 def fetch_trades(period="week"):
-    now = datetime.utcnow()
+    now = datetime.now(ZoneInfo("Asia/Seoul"))
+    
     if period == "week":
         start = now - timedelta(days=7)
     elif period == "month":
@@ -65,13 +67,18 @@ def fetch_trades(period="week"):
     else:
         start = None
 
+    if start:
+        start_utc = start.astimezone(ZoneInfo("UTC"))
+    else:
+        start_utc = None
+
     # scalping
-    query = supabase.table("scalping_trades").select("user_id,pnl_pct,side")
+    query = supabase.table("scalping_trades").select("user_id,pnl_pct,side,symbol")
     if start: query = query.gte("created_at", start.isoformat())
     scalping = query.execute().data
 
     # swing
-    query = supabase.table("swing_trades").select("user_id,pnl_pct,side")
+    query = supabase.table("swing_trades").select("user_id,pnl_pct,side,symbol")
     if start: query = query.gte("date_closed", start.isoformat())
     swing = query.execute().data
 
@@ -207,6 +214,7 @@ async def send_report(bot, period="week"):
 
     await bot.send_message(CHANNEL_ID, msg, parse_mode="HTML")
     await bot.send_photo(CHANNEL_ID, InputFile(chart, filename="report.png"))
+
 
 
 
