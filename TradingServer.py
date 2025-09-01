@@ -59,6 +59,9 @@ def safe_supabase_call(query):
 
 # /start
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_chat.type != "private":
+        return
+        
     print("Chat ID:", update.effective_chat.id)
     user_id = update.effective_user.id
     alias = get_or_create_alias(user_id)
@@ -751,6 +754,7 @@ async def webhook(request: Request):
     except Exception as e:
         print("❌ Webhook error:", e)
         return JSONResponse(content={"ok": False, "error": str(e)}, status_code=500)
+
 
 
 
