@@ -2,6 +2,7 @@
 import os
 from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
+from matplotlib import font_manager, rcParams
 from io import BytesIO
 from supabase import create_client
 from telegram import InputFile
@@ -162,6 +163,7 @@ async def send_report(bot, period="week"):
 
     await bot.send_message(CHANNEL_ID, msg, parse_mode="HTML")
     await bot.send_photo(CHANNEL_ID, InputFile(chart, filename="report.png"))
+
 
 
 
