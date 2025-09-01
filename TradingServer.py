@@ -736,7 +736,7 @@ async def on_startup():
         else:
             print(f"[DEBUG] Job registered: {job.name}, next_run_time=Unknown")
 
-    #await send_report(telegram_app.bot, period="week")
+    await send_report(telegram_app.bot, period="week")
     #await send_report(telegram_app.bot, period="month")
     
 @app.on_event("shutdown")
@@ -754,6 +754,7 @@ async def webhook(request: Request):
     except Exception as e:
         print("❌ Webhook error:", e)
         return JSONResponse(content={"ok": False, "error": str(e)}, status_code=500)
+
 
 
 
