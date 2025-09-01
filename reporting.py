@@ -7,6 +7,7 @@ from io import BytesIO
 from supabase import create_client
 from telegram import InputFile
 import numpy as np
+from collections import defaultdict
 
 # ====== 환경 변수 ======
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -16,11 +17,15 @@ key = os.getenv("SUPABASE_KEY")
 supabase = create_client(url, key)
 
 # ====== 폰트 적용 ======
-font_path = "font/NanumGothic-Regular.ttf"
-font_prop = font_manager.FontProperties(fname=font_path)
-rcParams['font.family'] = font_prop.get_name()  
-rcParams['axes.unicode_minus'] = False
-print(f"[INFO] Matplotlib font set to: {font_prop.get_name()}")
+font_path = "font/NanumGothic-Regular.ttf"  
+if os.path.exists(font_path):
+    font_prop = font_manager.FontProperties(fname=font_path)
+    rcParams['font.family'] = font_prop.get_name()   
+    rcParams['axes.unicode_minus'] = False
+    print(f"[INFO] Matplotlib font set to: {font_prop.get_name()}")
+else:
+    print(f"[WARN] Font file not found at {font_path}")
+
 
 # ====== 통계 계산 ======
 def calc_stats(profits):
@@ -94,6 +99,25 @@ def calc_ranking(all_trades, top_n=3):
     ranking.sort(key=lambda x: x[1], reverse=True)  # 누적 손익률 순
     return ranking[:top_n]
 
+# ====== 종목별 승률 계산 ======
+def calc_symbol_stats(all_trades, top_n=3):
+    stats = defaultdict(lambda: {"win":0, "total":0})
+    for t in all_trades:
+        if t.get("pnl_pct") is None: 
+            continue
+        sym = t.get("symbol", "N/A")
+        stats[sym]["total"] += 1
+        if t["pnl_pct"] > 0:
+            stats[sym]["win"] += 1
+    
+    results = []
+    for sym, d in stats.items():
+        win_rate = d["win"] / d["total"] * 100
+        results.append((sym, win_rate, d["total"]))
+    
+    results.sort(key=lambda x: x[1], reverse=True)
+    return results[:top_n], list(stats.keys())
+    
 # ====== 그래프 생성 ======
 def generate_charts(all_trades):
     pnls = [row["pnl_pct"] for row in all_trades if row["pnl_pct"] is not None]
@@ -101,9 +125,9 @@ def generate_charts(all_trades):
 
     plt.figure(figsize=(6,4))
     plt.plot(range(len(cum_pnls)), cum_pnls, marker="o")
-    plt.title("누적 손익률 추이")
+    plt.title("PNL 추이")
     plt.xlabel("거래")
-    plt.ylabel("누적 손익률 %")
+    plt.ylabel("누적 PNL %")
     plt.grid(True, linestyle="--", alpha=0.7)
 
     buf = BytesIO()
@@ -115,15 +139,25 @@ def generate_charts(all_trades):
 # ====== 메시지 포맷 ======
 def format_message(period, stats_scalp, stats_swing, stats_total, ranking, all_trades):
     msg = f"📊 <b>{period.upper()} 리포트</b>\n\n"
-    msg += f"단타: {stats_scalp['count']}건, 승률 {stats_scalp['win_rate']:.1f}%, 누적 {stats_scalp['total']:.1f}%\n"
-    msg += f"장기: {stats_swing['count']}건, 승률 {stats_swing['win_rate']:.1f}%, 누적 {stats_swing['total']:.1f}%\n"
-    msg += f"전체: {stats_total['count']}건, 승률 {stats_total['win_rate']:.1f}%, 누적 {stats_total['total']:.1f}%\n\n"
+    msg += "전체 사용자 통계\n"
+    msg += "────────────────────────\n"
+    msg += f"단타: {stats_scalp['count']}건, 승률 {stats_scalp['win_rate']:.1f}%, PNL {stats_scalp['total']:.1f}%\n"
+    msg += f"장기: {stats_swing['count']}건, 승률 {stats_swing['win_rate']:.1f}%, PNL {stats_swing['total']:.1f}%\n"
+    msg += f"전체: {stats_total['count']}건, 승률 {stats_total['win_rate']:.1f}%, PNL {stats_total['total']:.1f}%\n\n"
+    msg += f"수익지수(PF): {stats_total['pf']:.2f} {stats_total['pf_eval']}\n\n"
     
     long_cnt = len([t for t in all_trades if t.get("side") == "롱"])
     short_cnt = len([t for t in all_trades if t.get("side") == "숏"])
+    total_pos = long_cnt + short_cnt
+    long_ratio = (long_cnt/total_pos*100) if total_pos else 0
+    short_ratio = (short_cnt/total_pos*100) if total_pos else 0
+    
     scalp_cnt = stats_scalp["count"]
     swing_cnt = stats_swing["count"]
-
+    total_style = scalp_cnt + swing_cnt
+    scalp_ratio = (scalp_cnt/total_style*100) if total_style else 0
+    swing_ratio = (swing_cnt/total_style*100) if total_style else 0
+    
     if long_cnt + short_cnt > 0:
         long_ratio = long_cnt / (long_cnt + short_cnt) * 100
         short_ratio = short_cnt / (long_cnt + short_cnt) * 100
@@ -136,12 +170,22 @@ def format_message(period, stats_scalp, stats_swing, stats_total, ranking, all_t
     else:
         scalp_ratio = swing_ratio = 0
 
-    msg += f"롱/숏 비율 → 롱 {long_ratio:.1f}%, 숏 {short_ratio:.1f}%\n"
     msg += f"단타/장기 비율 → 단타 {scalp_ratio:.1f}%, 장기 {swing_ratio:.1f}%\n\n"
-    msg += "🏆 랭킹:\n"
+    msg += f"포지션 비율 → 롱 {long_ratio:.1f}%, 숏 {short_ratio:.1f}%\n"
+
+    top_symbols, all_symbols = calc_symbol_stats(all_trades, top_n=3)
+    if all_symbols:
+        msg += f"📌 이번주 거래 종목: {', '.join(all_symbols)}\n\n"
+    if top_symbols:
+        msg += "🥇 승률 TOP3 종목:\n"
+        for i, (sym, winr, cnt) in enumerate(top_symbols, 1):
+            msg += f"{i}. {sym} – {winr:.1f}% ({cnt}건)\n"
+        msg += "\n"
     
+    msg += "🏆 랭킹:\n"
     for i, (alias, total, avg, cnt) in enumerate(ranking, 1):
         msg += f"{i}. {alias} → {total:.1f}% (평균손익률 {avg:.1f}%, {cnt}건)\n"
+    
     return msg
 
 # ====== 리포트 전송 ======
@@ -163,6 +207,7 @@ async def send_report(bot, period="week"):
 
     await bot.send_message(CHANNEL_ID, msg, parse_mode="HTML")
     await bot.send_photo(CHANNEL_ID, InputFile(chart, filename="report.png"))
+
 
 
 
