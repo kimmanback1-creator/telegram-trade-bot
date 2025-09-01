@@ -1,7 +1,7 @@
 # reporting.py
 import os
 from datetime import datetime, timedelta
-from zoneinfo import ZoneInf
+from zoneinfo import ZoneInfo
 import matplotlib.pyplot as plt
 from matplotlib import font_manager, rcParams
 from io import BytesIO
@@ -214,6 +214,7 @@ async def send_report(bot, period="week"):
 
     await bot.send_message(CHANNEL_ID, msg, parse_mode="HTML")
     await bot.send_photo(CHANNEL_ID, InputFile(chart, filename="report.png"))
+
 
 
 
