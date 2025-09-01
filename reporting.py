@@ -178,11 +178,12 @@ def format_message(period, stats_scalp, stats_swing, stats_total, ranking, all_t
         scalp_ratio = swing_ratio = 0
 
     msg += f"단타/장기 비율 → 단타 {scalp_ratio:.1f}%, 장기 {swing_ratio:.1f}%\n\n"
+    
     msg += f"포지션 비율 → 롱 {long_ratio:.1f}%, 숏 {short_ratio:.1f}%\n"
 
     top_symbols, all_symbols = calc_symbol_stats(all_trades, top_n=3)
     if all_symbols:
-        msg += f"📌 이번주 거래 종목: {', '.join(all_symbols)}\n\n"
+        msg += f"이번주 거래 종목: {', '.join(all_symbols)}\n\n"
     if top_symbols:
         msg += "🥇 승률 TOP3 종목:\n"
         for i, (sym, winr, cnt) in enumerate(top_symbols, 1):
@@ -214,6 +215,7 @@ async def send_report(bot, period="week"):
 
     await bot.send_message(CHANNEL_ID, msg, parse_mode="HTML")
     await bot.send_photo(CHANNEL_ID, InputFile(chart, filename="report.png"))
+
 
 
 
