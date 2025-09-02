@@ -23,7 +23,7 @@ async def root():
     return {"status": "ok"}
     
 # ====== 별칭 생성기 ======
-ADJECTIVES = ["불타는", "날쌘", "예리한", "강인한", "차가운", "뜨거운", "빠른", "은밀한", "화끈한", "거대한", "섹시한", "냉정한", "영리한", "잔혹한", "고독한", "거친", "맹렬한", "전설의", "저주받은", "깜찍한", "엉뚱한", "상큼한", "도도한", "노련한"]
+ADJECTIVES = ["불타는", "날쌘", "예리한", "강인한", "차가운", "뜨거운", "빠른", "은밀한", "화끈한", "거대한", "섹시한", "냉정한", "영리한", "잔혹한", "고독한", "거친", "맹렬한", "전설의 ", "저주받은", "깜찍한", "엉뚱한", "상큼한", "도도한", "노련한"]
 ANIMALS = ["곰", "호랑이", "코브라", "매", "황소", "늑대", "독수리", "상어", "팬더", "사자", "부엉이", "고양이", "아깽이", "강아지", "개미", "불개미", "벌꿀오소리", "얼룩말", "캥거루", "침팬치", "여우", "고래", "돌고래", "해파리", "펭귄", "물개", "까마귀", "앵무새", "공작새", "참새", "악어", "도마뱀", "개구리", "장수말벌", "풍뎅이"]
 
 def generate_alias(user_id: int) -> str:
@@ -755,41 +755,8 @@ async def webhook(request: Request):
         print("❌ Webhook error:", e)
         return JSONResponse(content={"ok": False, "error": str(e)}, status_code=500)
 
-@app.post("/tradingview-webhook")
-async def tradingview_webhook(request: Request):
-    try:
-        data = await request.json()
-        print("🔥 TradingView webhook received:", data)
 
-        # DB 저장
-        supabase.table("sector_signals").insert({
-            "symbol": data.get("symbol"),
-            "interval": data.get("interval"),
-            "close": data.get("close"),
-            "change_pct": data.get("change_pct"),
-            "ts": data.get("ts")
-        }).execute()
 
-        # cleanup
-        resp = supabase.table("sector_signals").select("id").order("created_at", desc=True).execute()
-        rows = resp.data
-        if len(rows) > 10:
-            oldest_id = rows[-1]["id"] 
-            supabase.table("sector_signals").delete().eq("id", oldest_id).execute()
-            print(f"🗑 오래된 데이터 1개 삭제: id={oldest_id}")
-
-        # 텔레그램 알림 (종가 제외)
-        msg = (
-            f"🔥 섹터 변동성 포착\n"
-            f"{data.get('symbol')} | 변동률 {float(data.get('change_pct')):.2f}%"
-        )
-        await telegram_app.bot.send_message(chat_id=os.getenv("CHANNEL_ID"), text=msg)
-
-        return JSONResponse(content={"ok": True}, status_code=200)
-
-    except Exception as e:
-        print("❌ TradingView Webhook Error:", e)
-        return JSONResponse(content={"ok": False, "error": str(e)}, status_code=500)
 
 
 
