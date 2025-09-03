@@ -758,13 +758,28 @@ async def webhook(request: Request):
         print("❌ Webhook error:", e)
         return JSONResponse(content={"ok": False, "error": str(e)}, status_code=500)
 
+last_called = {}
+last_global_call = None
+
 async def get_top3_tokens(category_id: str):
+    global last_global_call
+    now = datetime.now()
+    
+    if category_id in last_called and (now - last_called[category_id]).seconds < 60:
+        print(f"[Skip] {category_id} 최근 호출 있음 → API 호출 생략")
+        return []
+
+    if last_global_call and (now - last_global_call).seconds < 1:
+        wait_time = 1 - (now - last_global_call).seconds
+        print(f"[Global Cooldown] {wait_time}초 대기")
+        await asyncio.sleep(wait_time)
+    
     url = f"{COINGECKO_API}/coins/markets"
     params = {
         "vs_currency": "usd",
         "category": category_id,
         "order": "price_change_percentage_24h_desc",
-        "per_page": 3,
+        "per_page": 50,
         "page": 1
     }
     print(f"[Coingecko Call] {datetime.now()} | category={category_id}")
@@ -772,8 +787,32 @@ async def get_top3_tokens(category_id: str):
     async with httpx.AsyncClient(timeout=10.0) as client:
         r = await client.get(url, params=params)
         print(f"[Coingecko Response] status={r.status_code}")
+        if r.status_code == 429:
+            print("❌ API rate limit (429) 발생")
+            return []
         r.raise_for_status()
-        return r.json()  
+        coins = r.json()
+        
+    last_called[category_id] = now
+    last_global_call = now
+    
+    coins_sorted = sorted(
+        coins,
+        key=lambda c: c.get("price_change_percentage_24h", 0),
+        reverse=True
+    )
+
+    seen = set()
+    unique_coins = []
+    for coin in coins_sorted:
+        sym = coin.get("symbol", "").upper()
+        if sym not in seen:
+            seen.add(sym)
+            unique_coins.append(coin)
+        if len(unique_coins) == 3:
+            break
+
+    return unique_coins
 
 async def send_top3_to_telegram(bot, category_id: str, coins: list):
     print(f"[Telegram Send] {datetime.now()} | category={category_id} | coins={len(coins)}")
@@ -845,6 +884,7 @@ async def sector_webhook(request: Request):
             await send_top3_to_telegram(telegram_app.bot, category_id, coins)
 
     return JSONResponse(content={"ok": True})
+
 
 
 
