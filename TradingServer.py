@@ -9,10 +9,13 @@ from supabase import create_client
 from fastapi.responses import JSONResponse
 from reporting import send_report
 import random
+import httpx
 
 TOKEN = os.getenv("BOT_TOKEN")
 url = os.getenv("SUPABASE_URL")
 key = os.getenv("SUPABASE_KEY")
+COINGECKO_API = "https://api.coingecko.com/api/v3"
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 supabase = create_client(url, key)
 telegram_app = Application.builder().token(TOKEN).build()
@@ -755,55 +758,89 @@ async def webhook(request: Request):
         print("❌ Webhook error:", e)
         return JSONResponse(content={"ok": False, "error": str(e)}, status_code=500)
 
+async def get_top3_tokens(category_id: str):
+    url = f"{COINGECKO_API}/coins/markets"
+    params = {
+        "vs_currency": "usd",
+        "category": category_id,
+        "order": "price_change_percentage_24h_desc",
+        "per_page": 3,
+        "page": 1
+    }
 
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        r = await client.get(url, params=params)
+        r.raise_for_status()
+        return r.json()  
 
+async def send_top3_to_telegram(bot, category_id: str, coins: list):
+    display_name_map = {
+        "ethereum-ecosystem": "Ethereum ECO",
+        "solana-ecosystem": "Solana ECO",
+        "binance-smart-chain": "BNB Chain ECO",
+        "meme-token": "Meme",
+        "depin": "DePIN",
+        "artificial-intelligence": "AI",
+        "layer-1": "Layer1",
+        "centralized-exchange-token-cex": "Exchanges",
+        "real-world-assets-rwa": "RWA",
+        "world-liberty-financial-portfolio": "world-liberty-financial-portfolio",
+        "dot-ecosystem": "POLKADOT"
+        
+    }
+    
+    display_name = display_name_map.get(category_id, category_id)
+    
+    if not coins:
+        await bot.send_message(
+            chat_id=TELEGRAM_CHAT_ID,
+            text=f"📊 {display_name} 카테고리에서 코인을 찾지 못했습니다."
+        )
+        return
 
+    msg_lines = [f"🔥 <b>{display_name} Top 3 상승 코인 (24h)</b>\n"]
+    for coin in coins:
+        name = coin.get("name")
+        symbol = coin.get("symbol").upper()
+        price = coin.get("current_price")
+        change = coin.get("price_change_percentage_24h", 0)
+        msg_lines.append(f"- {name} ({symbol}) | ${price} | {change:.2f}%")
 
+    await bot.send_message(
+        chat_id=TELEGRAM_CHAT_ID,
+        text="\n".join(msg_lines),
+        parse_mode="HTML"
+    )
 
+@app.post("/sector")
+async def sector_webhook(request: Request):
+    data = await request.json()
+    symbol = data.get("symbol", "").upper()  
+    message = data.get("message") 
 
+    if message == "UP":
+        
+        mapping = {
+            "SOLANA.C": "solana-ecosystem",
+            "BNBCHAIN.C": "binance-smart-chain",
+            "ETHEREUM.C": "ethereum-ecosystem",
+            "STABLE.C": "stablecoins",
+            "STABLE.C.D": "stablecoins",
+            "LAYER1.C": "layer-1",
+            "DEPIN.C": "depin",
+            "MEME.C": "meme-token",
+            "EXCHANGES.C": "centralized-exchange-token-cex",
+            "AI.C": "artificial-intelligence",
+            "RWA.C": "real-world-assets-rwa",
+            "WORLDLIBERTY.C": "world-liberty-financial-portfolio",
+            "POLKADOT.C": "dot-ecosystem",
+        }
+        category_id = mapping.get(symbol)
+        if category_id:
+            coins = await get_top3_tokens(category_id)
+            await send_top3_to_telegram(telegram_app.bot, category_id, coins)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    return JSONResponse(content={"ok": True})
 
 
 
