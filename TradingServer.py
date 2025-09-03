@@ -767,13 +767,16 @@ async def get_top3_tokens(category_id: str):
         "per_page": 3,
         "page": 1
     }
-
+    print(f"[Coingecko Call] {datetime.now()} | category={category_id}")
+    
     async with httpx.AsyncClient(timeout=10.0) as client:
         r = await client.get(url, params=params)
+        print(f"[Coingecko Response] status={r.status_code}")
         r.raise_for_status()
         return r.json()  
 
 async def send_top3_to_telegram(bot, category_id: str, coins: list):
+    print(f"[Telegram Send] {datetime.now()} | category={category_id} | coins={len(coins)}")
     display_name_map = {
         "ethereum-ecosystem": "Ethereum ECO",
         "solana-ecosystem": "Solana ECO",
@@ -815,6 +818,7 @@ async def send_top3_to_telegram(bot, category_id: str, coins: list):
 @app.post("/sector")
 async def sector_webhook(request: Request):
     data = await request.json()
+    print(f"[Webhook Triggered] {datetime.now()} | data={data}")
     symbol = data.get("symbol", "").upper()  
     message = data.get("message") 
 
@@ -841,6 +845,7 @@ async def sector_webhook(request: Request):
             await send_top3_to_telegram(telegram_app.bot, category_id, coins)
 
     return JSONResponse(content={"ok": True})
+
 
 
 
