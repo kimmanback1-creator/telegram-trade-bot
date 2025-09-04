@@ -885,6 +885,82 @@ async def sector_webhook(request: Request):
 
     return JSONResponse(content={"ok": True})
 
+@app.post("/sector_candle")
+async def sector_candle(request: Request):
+    data = await request.json()
+    print(f"[Sector Candle] {datetime.now()} | data={data}")
+
+    symbol = data.get("symbol")
+    interval = data.get("interval")
+    candle_time = data.get("time")
+    close = float(data.get("close"))
+
+    dt_utc = datetime.fromisoformat(candle_time.replace("Z", "+00:00"))
+    dt_kst = dt_utc.astimezone(KST)
+    
+    #
+    safe_supabase_call(
+        supabase.table("sector_candles").insert({
+            "symbol": symbol,
+            "candle_time": dt_kst.isoformat(), 
+            "interval": interval,
+            "close": close
+        })
+    )
+
+    rows = safe_supabase_call(
+        supabase.table("sector_candles")
+        .select("id, candle_time")
+        .eq("symbol", symbol)
+        .eq("interval", interval)
+        .order("candle_time", desc=True)
+    )
+
+    if rows and rows.data and len(rows.data) > 3:
+        to_delete = [r["id"] for r in rows.data[3:]]
+        safe_supabase_call(
+            supabase.table("sector_candles").delete().in_("id", to_delete)
+        )
+    
+    # 1D 
+    if interval == "1D":
+        print(f"[Daily Ref] {symbol} 기준가 저장 (KST): {close}")
+        return JSONResponse(content={"ok": True})
+
+    # 4H CAL
+    if interval == "240":
+        if dt_kst.hour < 9:  
+            # "어제 09:00 ~ 오늘 08:59"
+            start = datetime(dt_kst.year, dt_kst.month, dt_kst.day, 9, 0, tzinfo=KST) - timedelta(days=1)
+        else:
+            # "오늘 09:00 ~ 내일 08:59"
+            start = datetime(dt_kst.year, dt_kst.month, dt_kst.day, 9, 0, tzinfo=KST)
+        end = start + timedelta(days=1) - timedelta(seconds=1)
+        
+        ref = safe_supabase_call(
+            supabase.table("sector_candles")
+            .select("close")
+            .eq("symbol", symbol)
+            .eq("interval", "1D")
+            .gte("candle_time", start.isoformat())
+            .lt("candle_time", end.isoformat())
+            .order("candle_time", desc=True)
+            .limit(1)
+        )
+
+        if ref and ref.data:
+            ref_close = float(ref.data[0]["close"])
+            pct = (close - ref_close) / ref_close * 100
+
+            msg = f"🔥 {symbol} 섹터\n현재 변동률: {pct:.2f}%"
+            await telegram_app.bot.send_message(
+                chat_id=TELEGRAM_CHAT_ID,
+                text=msg
+            )
+        else:
+            print(f"[WARN] {symbol} 기준가(1D) 없음")
+
+    return JSONResponse(content={"ok": True})
 
 
 
