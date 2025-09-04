@@ -3,7 +3,7 @@ from fastapi import FastAPI, Request
 from dotenv import load_dotenv
 from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, ConversationHandler, CallbackQueryHandler
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 from zoneinfo import ZoneInfo
 from supabase import create_client
 from fastapi.responses import JSONResponse
@@ -964,6 +964,7 @@ async def sector_candle(request: Request):
             print(f"[WARN] {symbol} 기준가(1D) 없음")
 
     return JSONResponse(content={"ok": True})
+
 
 
 
