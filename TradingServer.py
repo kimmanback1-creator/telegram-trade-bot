@@ -900,12 +900,15 @@ async def sector_candle(request: Request):
     
     #
     safe_supabase_call(
-        supabase.table("sector_candles").insert({
-            "symbol": symbol,
-            "candle_time": dt_kst.isoformat(), 
-            "interval": interval,
-            "close": close
-        })
+        supabase.table("sector_candles").upsert(
+            {
+                "symbol": symbol,
+                "candle_time": dt_kst.isoformat(), 
+                "interval": interval,
+                "close": close
+            },
+            on_conflict=["symbol", "interval", "candle_time"]
+        )
     )
 
     rows = safe_supabase_call(
@@ -924,7 +927,7 @@ async def sector_candle(request: Request):
     
     # 1D 
     if interval == "1D":
-        print(f"[Daily Ref] {symbol} 기준가 저장 (KST): {close}")
+        print(f"[Daily Ref] {symbol} 1D 기준가 저장 (KST {dt_kst}): {close}")
         return JSONResponse(content={"ok": True})
 
     # 4H CAL
@@ -961,6 +964,7 @@ async def sector_candle(request: Request):
             print(f"[WARN] {symbol} 기준가(1D) 없음")
 
     return JSONResponse(content={"ok": True})
+
 
 
 
