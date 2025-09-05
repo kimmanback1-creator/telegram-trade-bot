@@ -885,6 +885,20 @@ async def sector_webhook(request: Request):
 
     return JSONResponse(content={"ok": True})
 
+SECTOR_NAME_MAP = {
+    "SOLANA.C": "솔라나",
+    "ETHEREUM.C": "이더리움",
+    "WORLDLIBERTY.C": "월드 리버티 포트폴리오",
+    "EXCHANGES.C": "거래소",
+    "LAYER1.C": "레이어1",
+    "BNBCHAIN.C": "BNB",
+    "RWA.C": "RWA",
+    "MEME.C": "MEME",
+    "DEPIN.C": "DEPIN",
+    "AI.C": "AI",
+    "POLKADOT.C": "폴카닷"
+}
+
 @app.post("/sector_candle")
 async def sector_candle(request: Request):
     data = await request.json()
@@ -955,8 +969,9 @@ async def sector_candle(request: Request):
         if ref and ref.data:
             ref_close = float(ref.data[0]["close"])
             pct = (close - ref_close) / ref_close * 100
-
-            msg = f"🔥 {symbol} 섹터\n현재 변동률: {pct:.2f}%"
+            
+            tname = SECTOR_NAME_MAP.get(symbol, symbol)
+            msg = f"🔥 {tname} 섹터\n현재 변동률: {pct:.2f}%"
             await telegram_app.bot.send_message(
                 chat_id=TELEGRAM_CHAT_ID,
                 text=msg
@@ -965,6 +980,7 @@ async def sector_candle(request: Request):
             print(f"[WARN] {symbol} 기준가(1D) 없음")
 
     return JSONResponse(content={"ok": True})
+
 
 
 
