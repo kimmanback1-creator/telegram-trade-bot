@@ -969,17 +969,24 @@ async def sector_candle(request: Request):
         if ref and ref.data:
             ref_close = float(ref.data[0]["close"])
             pct = (close - ref_close) / ref_close * 100
-            
+
+            if pct > 0:
+                icon = "🔥"
+            elif pct < 0:
+                icon = "📉"
+            else:
+                icon = "🧊"
             tname = SECTOR_NAME_MAP.get(symbol, symbol)
-            msg = f"🔥 {tname} 섹터\n현재 변동률: {pct:.2f}%"
+            msg = f"{icon} {tname} 섹터\n현재 변동률: {pct:.2f}%"
             await telegram_app.bot.send_message(
                 chat_id=TELEGRAM_CHAT_ID,
                 text=msg
             )
         else:
-            print(f"[WARN] {symbol} 기준가(1D) 없음")
+            print(f"[icon] {symbol} 기준가(1D) 없음")
 
     return JSONResponse(content={"ok": True})
+
 
 
 
