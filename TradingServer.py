@@ -894,6 +894,7 @@ async def sector_candle(request: Request):
     interval = data.get("candle_interval")
     candle_time = data.get("time")
     close = float(data.get("close"))
+    print(f"DEBUG interval={interval}, type={type(interval)}")
 
     dt_utc = datetime.fromisoformat(candle_time.replace("Z", "+00:00"))
     dt_kst = dt_utc.astimezone(KST)
@@ -964,6 +965,7 @@ async def sector_candle(request: Request):
             print(f"[WARN] {symbol} 기준가(1D) 없음")
 
     return JSONResponse(content={"ok": True})
+
 
 
 
