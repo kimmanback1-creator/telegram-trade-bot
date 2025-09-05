@@ -907,7 +907,7 @@ async def sector_candle(request: Request):
                 "candle_interval": interval,
                 "close": close
             },
-            on_conflict=["symbol", "candle_interval", "candle_time"]
+            on_conflict="symbol,candle_interval,candle_time"
         )
     )
 
@@ -964,6 +964,7 @@ async def sector_candle(request: Request):
             print(f"[WARN] {symbol} 기준가(1D) 없음")
 
     return JSONResponse(content={"ok": True})
+
 
 
 
