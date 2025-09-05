@@ -891,10 +891,10 @@ async def sector_candle(request: Request):
     print(f"[Sector Candle] {datetime.now()} | data={data}")
 
     symbol = data.get("symbol")
-    interval = data.get("candle_interval")
+    candle_interval = data.get("interval")
     candle_time = data.get("time")
     close = float(data.get("close"))
-    print(f"DEBUG interval={interval}, type={type(interval)}")
+    print(f"DEBUG candle_interval={candle_interval}, type={type(candle_interval)}")
 
     dt_utc = datetime.fromisoformat(candle_time.replace("Z", "+00:00"))
     dt_kst = dt_utc.astimezone(KST)
@@ -905,7 +905,7 @@ async def sector_candle(request: Request):
             {
                 "symbol": symbol,
                 "candle_time": dt_kst.isoformat(), 
-                "candle_interval": interval,
+                "candle_interval": str(candle_interval),
                 "close": close
             },
             on_conflict="symbol,candle_interval,candle_time"
@@ -916,7 +916,7 @@ async def sector_candle(request: Request):
         supabase.table("sector_candles")
         .select("id, candle_time")
         .eq("symbol", symbol)
-        .eq("candle_interval", interval)
+        .eq("candle_interval", candle_interval)
         .order("candle_time", desc=True)
     )
 
@@ -927,12 +927,12 @@ async def sector_candle(request: Request):
         )
     
     # 1D 
-    if interval == "1D":
+    if candle_interval == "1D":
         print(f"[Daily Ref] {symbol} 1D 기준가 저장 (KST {dt_kst}): {close}")
         return JSONResponse(content={"ok": True})
 
     # 4H CAL
-    if interval == "240":
+    if candle_interval == "240":
         if dt_kst.hour < 9:  
             # "어제 09:00 ~ 오늘 08:59"
             start = datetime(dt_kst.year, dt_kst.month, dt_kst.day, 9, 0, tzinfo=KST) - timedelta(days=1)
@@ -965,6 +965,7 @@ async def sector_candle(request: Request):
             print(f"[WARN] {symbol} 기준가(1D) 없음")
 
     return JSONResponse(content={"ok": True})
+
 
 
 
