@@ -891,7 +891,7 @@ async def sector_candle(request: Request):
     print(f"[Sector Candle] {datetime.now()} | data={data}")
 
     symbol = data.get("symbol")
-    interval = data.get("interval")
+    interval = data.get("candle_interval")
     candle_time = data.get("time")
     close = float(data.get("close"))
 
@@ -915,7 +915,7 @@ async def sector_candle(request: Request):
         supabase.table("sector_candles")
         .select("id, candle_time")
         .eq("symbol", symbol)
-        .eq("interval", interval)
+        .eq("candle_interval", interval)
         .order("candle_time", desc=True)
     )
 
@@ -964,6 +964,7 @@ async def sector_candle(request: Request):
             print(f"[WARN] {symbol} 기준가(1D) 없음")
 
     return JSONResponse(content={"ok": True})
+
 
 
 
