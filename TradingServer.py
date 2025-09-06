@@ -918,7 +918,7 @@ async def sector_candle(request: Request):
         supabase.table("sector_candles").upsert(
             {
                 "symbol": symbol,
-                "candle_time": dt_kst.isoformat(), 
+                "candle_time": dt_utc.isoformat(), 
                 "candle_interval": str(candle_interval),
                 "close": close
             },
@@ -934,19 +934,26 @@ async def sector_candle(request: Request):
         .order("candle_time", desc=True)
     )
 
-    if rows and rows.data and len(rows.data) > 3:
-        to_delete = [r["id"] for r in rows.data[3:]]
-        safe_supabase_call(
-            supabase.table("sector_candles").delete().in_("id", to_delete)
-        )
+    
     
     # 1D 
     if candle_interval == "1D":
+        if rows and rows.data and len(rows.data) > 1:
+            to_delete = [r["id"] for r in rows.data[1:]]
+            safe_supabase_call(
+                supabase.table("sector_candles").delete().in_("id", to_delete)
+            )
         print(f"[Daily Ref] {symbol} 1D 기준가 저장 (KST {dt_kst}): {close}")
         return JSONResponse(content={"ok": True})
 
     # 4H CAL
     if candle_interval == "240":
+        if rows and rows.data and len(rows.data) > 3:
+            to_delete = [r["id"] for r in rows.data[3:]]
+            safe_supabase_call(
+                supabase.table("sector_candles").delete().in_("id", to_delete)
+            )
+            
         if dt_kst.hour < 9:  
             # "어제 09:00 ~ 오늘 08:59"
             start = datetime(dt_kst.year, dt_kst.month, dt_kst.day, 9, 0, tzinfo=KST) - timedelta(days=1)
@@ -970,9 +977,9 @@ async def sector_candle(request: Request):
             ref_close = float(ref.data[0]["close"])
             pct = (close - ref_close) / ref_close * 100
 
-            if pct > 0:
+            if abs(pct) >= 1:
                 icon = "🔥"
-            elif pct < 0:
+            elif pct < -1:
                 icon = "📉"
             else:
                 icon = "🧊"
@@ -986,6 +993,7 @@ async def sector_candle(request: Request):
             print(f"[icon] {symbol} 기준가(1D) 없음")
 
     return JSONResponse(content={"ok": True})
+
 
 
 
