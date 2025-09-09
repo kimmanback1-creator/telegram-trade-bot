@@ -45,7 +45,7 @@ def get_or_create_alias(user_id: int):
     return alias
 
 #전역 변수
-MAIN_MENU = [["📓 일지작성(단타)", "일지작성(장기)"], ["📊 통계보기", "❌ 취소"]]
+MAIN_MENU = [["📓 일지작성(단타)", "일지작성(장기)"], ["📊 통계보기", "❌ 취소", "🧠 AI 피드백"]]
 LONG_MENU = [["새 진입 기록", "청산하기"], ["❌ 취소 / 뒤로가기"]]
 
 # 단계 정의
@@ -267,7 +267,82 @@ async def show_statistics(update: Update, context: ContextTypes.DEFAULT_TYPE):
         pass
     
     user_id = update.message.from_user.id
+    
+async def ai_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    chat_id = update.effective_chat.id
+    
+    response_scalp = safe_supabase_call(
+        supabase.table("scalping_trades")
+        .select("reason, pnl_pct")
+        .eq("user_id", user_id)
+        .order("id", desc=True)
+        .limit(30)
+        )
 
+    response_swing = safe_supabase_call(
+        supabase.table("swing_trades")
+        .select("reason_entry, reason_exit, pnl_pct")
+        .eq("user_id", user_id)
+        .order("trade_id", desc=True)   
+        .limit(30)
+        )
+    
+    records = []
+    if response_scalp and response_scalp.data:
+        for row in response_scalp.data:
+            records.append({
+                "reason": row.get("reason"),
+                "pnl_pct": row.get("pnl_pct")
+            })
+
+    if response_swing and response_swing.data:
+        for row in response_swing.data:
+            if row.get("reason_entry"):
+                records.append({"reason": row["reason_entry"], "pnl_pct": row.get("pnl_pct")})
+            if row.get("reason_exit"):
+                records.append({"reason": row["reason_exit"], "pnl_pct": row.get("pnl_pct")})
+    if not records:
+        await context.bot.send_message(chat_id, "피드백할 매매 기록이 없습니다.")
+        return
+        
+    prompt_text = "아래는 사용자의 최근 매매 기록입니다.\n"
+    prompt_text += "손익률(pnl_pct)이 양수면 성공한 매매, 음수면 실패한 매매입니다.\n"
+    prompt_text += "이 사용자의 안좋은 매매습관과 좋은 매매습관등을 분석하여 앞으로 어떻게 하면 좋을지 객관적으로 피드백하세요.\n\n"
+
+    for i, r in enumerate(records, 1):
+        prompt_text += f"[매매 {i}]\n"
+        prompt_text += f"- 진입 근거: {r['reason']}\n"
+        prompt_text += f"- 손익률: {r['pnl_pct']}%\n\n"
+
+    GPTS_API_URL = os.getenv("GPTS_API_URL") 
+    GPTS_API_KEY = os.getenv("GPTS_API_KEY")
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            r = await client.post(
+                GPTS_API_URL,
+                headers={"Authorization": f"Bearer {GPTS_API_KEY}"},
+                json={
+                    "model": "gpt-4o-mini",
+                    "messages": [
+                        {"role": "system", "content": "당신은 트레이딩 코치입니다."},
+                        {"role": "user", "content": prompt_text}
+                    ]
+                }
+            )
+        r.raise_for_status()
+        gpt_reply = r.json().get("choices", [{}])[0].get("message", {}).get("content", "⚠️ 응답 없음")
+        
+    except Exception as e:
+        print("❌ GPT 호출 실패:", e)
+        await context.bot.send_message(chat_id, "⚠️ AI 피드백 생성에 실패했습니다.")
+        return
+
+    
+    await context.bot.send_message(chat_id, f"🧠 AI 피드백\n\n{gpt_reply}", parse_mode="HTML")
+    
+    
     # 단타
     response = safe_supabase_call(
         supabase.table("scalping_trades").select("pnl_pct").eq("user_id", user_id)
@@ -328,7 +403,8 @@ async def show_statistics(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(stats_message, parse_mode="HTML")
     return ConversationHandler.END
-# =========================
+
+    # =========================
 # 장기 매매일지
 # =========================
 async def swing_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -686,6 +762,7 @@ conv_long = ConversationHandler(
 
 telegram_app.add_handler(CommandHandler("start", start))
 telegram_app.add_handler(MessageHandler(filters.Text(["📊 통계보기"]), show_statistics))
+telegram_app.add_handler(MessageHandler(filters.Text(["🧠 AI 피드백"]), ai_feedback))
 telegram_app.add_handler(conv_scalp)
 telegram_app.add_handler(conv_long)
 
@@ -993,6 +1070,7 @@ async def sector_candle(request: Request):
             print(f"[icon] {symbol} 기준가(1D) 없음")
 
     return JSONResponse(content={"ok": True})
+
 
 
 
