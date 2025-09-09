@@ -276,7 +276,7 @@ async def ai_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         supabase.table("scalping_trades")
         .select("reason, pnl_pct")
         .eq("user_id", user_id)
-        .order("id", desc=True)
+        .order("created_at", desc=True)
         .limit(30)
         )
 
@@ -313,8 +313,6 @@ async def ai_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_message(chat_id, "피드백할 매매 기록이 없습니다.")
         return
         
-    prompt_text = "아래는 사용자의 최근 매매 기록입니다.\n"
-    prompt_text += "손익률(pnl_pct)이 양수면 성공한 매매, 음수면 실패한 매매입니다.\n"
     prompt_text = (
     "아래는 사용자의 최근 매매 기록입니다.\n"
     "손익률(pnl_pct)이 양수면 성공한 매매, 음수면 실패한 매매입니다.\n"
@@ -1087,6 +1085,7 @@ async def sector_candle(request: Request):
             print(f"[icon] {symbol} 기준가(1D) 없음")
 
     return JSONResponse(content={"ok": True})
+
 
 
 
