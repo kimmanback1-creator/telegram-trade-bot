@@ -297,20 +297,35 @@ async def ai_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             })
 
     if response_swing and response_swing.data:
-        for row in response_swing.data:
-            if row.get("reason_entry"):
-                if row.get("pnl_pct") in not None:
-                records.append({"reason": row["reason_entry"], "pnl_pct": row.get("pnl_pct")})
-            if row.get("reason_exit"):
-                if row.get("reason_exit") in not None:
-                records.append({"reason": row["reason_exit"], "pnl_pct": row.get("pnl_pct")})
+    for row in response_swing.data:
+        if row.get("reason_entry") and row.get("pnl_pct") is not None:
+            records.append({
+                "reason": row["reason_entry"],
+                "pnl_pct": row["pnl_pct"]
+            })
+        if row.get("reason_exit") and row.get("pnl_pct") is not None:
+            records.append({
+                "reason": row["reason_exit"],
+                "pnl_pct": row["pnl_pct"]
+            })
+
     if not records:
         await context.bot.send_message(chat_id, "피드백할 매매 기록이 없습니다.")
         return
         
     prompt_text = "아래는 사용자의 최근 매매 기록입니다.\n"
     prompt_text += "손익률(pnl_pct)이 양수면 성공한 매매, 음수면 실패한 매매입니다.\n"
-    prompt_text += "이 사용자의 안좋은 매매습관과 좋은 매매습관등을 분석하여 앞으로 어떻게 하면 좋을지 객관적으로 피드백하세요.\n\n"
+    prompt_text = (
+    "아래는 사용자의 최근 매매 기록입니다.\n"
+    "손익률(pnl_pct)이 양수면 성공한 매매, 음수면 실패한 매매입니다.\n"
+    "각 매매를 검토하고, 다음 항목을 중심으로 분석하세요:\n"
+    "1. 좋은 매매 습관 : 성공한 매매에서 나타난 장점.\n"
+    "2. 나쁜 매매 습관 : 실패한 매매에서 반복적으로 나타나는 문제.\n"
+    "3. 실질적인 개선 방안 : 앞으로 사용자가 바로 적용할 수 있는 구체적인 제안.\n"
+    "⚠️ 주의 : 심리분석이나 추상적인 이야기(예: 결단력 부족, 심리적 요인)는 최소화하고, "
+    "매매 근거와 손익률 데이터를 토대로 실제 매매 습관과 전략적 개선에 집중하세요.\n\n"
+)
+
 
     for i, r in enumerate(records, 1):
         prompt_text += f"[매매 {i}]\n"
@@ -1072,6 +1087,7 @@ async def sector_candle(request: Request):
             print(f"[icon] {symbol} 기준가(1D) 없음")
 
     return JSONResponse(content={"ok": True})
+
 
 
 
