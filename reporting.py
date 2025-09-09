@@ -145,7 +145,11 @@ def generate_charts(all_trades):
 
 # ====== 메시지 포맷 ======
 def format_message(period, stats_scalp, stats_swing, stats_total, ranking, all_trades):
-    msg = f"📊 <b>{period.upper()} 리포트</b>\n\n"
+    period_display = {
+        "week": "7DAY",
+        "month": "30DAY"
+    }.get(period.lower(), period.upper())
+    msg = f"📊 <b>{period_display} 리포트</b>\n\n"
     msg += "전체 사용자 통계\n"
     msg += "────────────────────────\n"
     msg += f"단타: {stats_scalp['count']}건, 승률 {stats_scalp['win_rate']:.1f}%, PNL {stats_scalp['total']:.1f}%\n"
@@ -215,6 +219,7 @@ async def send_report(bot, period="week"):
 
     await bot.send_message(CHANNEL_ID, msg, parse_mode="HTML")
     await bot.send_photo(CHANNEL_ID, InputFile(chart, filename="report.png"))
+
 
 
 
