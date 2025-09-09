@@ -299,8 +299,10 @@ async def ai_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if response_swing and response_swing.data:
         for row in response_swing.data:
             if row.get("reason_entry"):
+                if row.get("pnl_pct") in not None:
                 records.append({"reason": row["reason_entry"], "pnl_pct": row.get("pnl_pct")})
             if row.get("reason_exit"):
+                if row.get("reason_exit") in not None:
                 records.append({"reason": row["reason_exit"], "pnl_pct": row.get("pnl_pct")})
     if not records:
         await context.bot.send_message(chat_id, "피드백할 매매 기록이 없습니다.")
@@ -1070,6 +1072,7 @@ async def sector_candle(request: Request):
             print(f"[icon] {symbol} 기준가(1D) 없음")
 
     return JSONResponse(content={"ok": True})
+
 
 
 
