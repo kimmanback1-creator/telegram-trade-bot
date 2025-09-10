@@ -398,6 +398,9 @@ async def ai_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     "3. 실질적인 개선 방안 : 앞으로 사용자가 바로 적용할 수 있는 구체적인 제안.\n"
     "⚠️ 주의 : 심리분석이나 추상적인 이야기(예: 결단력 부족, 심리적 요인)는 최소화하고, "
     "매매 근거와 손익률 데이터를 토대로 실제 매매 습관과 전략적 개선에 집중하세요.\n\n"
+    "분석 결과에서는 반드시 매매 번호와 함께 심볼과 사이드를 같이 언급하세요.\n"
+    "예: '매매 11 (BTC 롱)', '매매 14 (ETH 숏)'\n\n"
+        
 )
 
 
@@ -1111,6 +1114,7 @@ async def sector_candle(request: Request):
             print(f"[icon] {symbol} 기준가(1D) 없음")
 
     return JSONResponse(content={"ok": True})
+
 
 
 
