@@ -858,10 +858,20 @@ async def on_shutdown():
 @app.post("/webhook")
 async def webhook(request: Request):
     try:
-        data = await request.json()
+        raw_body = await request.body()
+        if not raw_body:
+            print("⚠️ Webhook called with empty body")
+            return JSONResponse(content={"ok": False, "error": "Empty body"}, status_code=400)
+        try:
+            data = await request.json()
+        except Exception as e:
+            print("⚠️ JSON decode error:", e, "raw_body=", raw_body)
+            return JSONResponse(content={"ok": False, "error": "Invalid JSON"}, status_code=400)
+
         update = Update.de_json(data, telegram_app.bot)
         await telegram_app.process_update(update)
         return JSONResponse(content={"ok": True}, status_code=200)
+    
     except Exception as e:
         print("❌ Webhook error:", e)
         return JSONResponse(content={"ok": False, "error": str(e)}, status_code=500)
@@ -1101,6 +1111,7 @@ async def sector_candle(request: Request):
             print(f"[icon] {symbol} 기준가(1D) 없음")
 
     return JSONResponse(content={"ok": True})
+
 
 
 
