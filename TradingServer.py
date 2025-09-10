@@ -332,6 +332,14 @@ async def show_statistics(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def ai_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     chat_id = update.effective_chat.id
+
+    try:
+        await context.bot.delete_message(chat_id, update.message.message_id)
+    except:
+        pass
+    processing_msg = await context.bot.send_message(
+        chat_id, "🧠 AI 피드백을 생성 중입니다...\n⏳ 잠시만 기다려 주세요."
+    )
     
     response_scalp = safe_supabase_call(
         supabase.table("scalping_trades")
@@ -415,7 +423,7 @@ async def ai_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_message(chat_id, "⚠️ AI 피드백 생성에 실패했습니다.")
         return
 
-    
+    await context.bot.delete_message(chat_id, processing_msg.message_id)
     await context.bot.send_message(chat_id, f"🧠 AI 피드백\n\n{gpt_reply}", parse_mode="HTML")
     
     
@@ -1085,6 +1093,7 @@ async def sector_candle(request: Request):
             print(f"[icon] {symbol} 기준가(1D) 없음")
 
     return JSONResponse(content={"ok": True})
+
 
 
 
