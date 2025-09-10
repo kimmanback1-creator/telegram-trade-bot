@@ -267,6 +267,67 @@ async def show_statistics(update: Update, context: ContextTypes.DEFAULT_TYPE):
         pass
     
     user_id = update.message.from_user.id
+
+    # 단타
+    response = safe_supabase_call(
+        supabase.table("scalping_trades").select("pnl_pct").eq("user_id", user_id)
+    )
+    scalping_profits = [safe_float(row["pnl_pct"]) for row in response.data if row["pnl_pct"] is not None] if response else []
+    scalping_profits = [p for p in scalping_profits if p is not None]
+
+    response = safe_supabase_call(
+        supabase.table("swing_trades").select("pnl_pct, exit_price").eq("user_id", user_id)
+    )
+    swing_profits = [safe_float(row["pnl_pct"]) for row in response.data if row["pnl_pct"] is not None] if response else []
+    swing_profits = [p for p in swing_profits if p is not None]
+
+    closed_trades = sum(1 for row in (response.data if response else []) if row["exit_price"] is not None)
+    open_trades   = sum(1 for row in (response.data if response else []) if row["exit_price"] is None)
+
+    # 전체
+    all_profits = scalping_profits + swing_profits
+
+    if not all_profits:
+        await update.message.reply_text("📊 기록이 없습니다.")
+        return
+
+    # 통계 계산
+    stats_scalp = calc_stats(scalping_profits)
+    stats_swing = calc_stats(swing_profits)
+    stats_total = calc_stats(all_profits)
+
+    # 출력 메시지
+    stats_message = (
+        f"📊 <b>매매 통계</b>\n\n"
+
+        f"📓 <b>단타 거래</b>\n"
+        f"- 총 거래 수: {stats_scalp['count']}\n"
+        f"- 승리: {stats_scalp['win']} | 패배: {stats_scalp['lose']}\n"
+        f"- 승률: {stats_scalp['win_rate']:.2f}%\n"
+        f"- 누적 손익률: {stats_scalp['total']:.2f}%\n"
+        f"- 거래당 평균 수익률: {stats_scalp['avg']:.2f}%\n"
+        f"- 수익지수: {stats_scalp['pf']:.2f} → {stats_scalp['pf_eval']}\n\n"
+
+        f"🕰 <b>장기 거래</b>\n"
+        f"- 총 거래 수: {stats_swing['count']}\n"
+        f"- 청산된 거래: {closed_trades} | 미청산 거래: {open_trades}\n"
+        f"- 승리: {stats_swing['win']} | 패배: {stats_swing['lose']}\n"
+        f"- 승률: {stats_swing['win_rate']:.2f}%\n"
+        f"- 누적 손익률: {stats_swing['total']:.2f}%\n"
+        f"- 거래당 평균 수익률: {stats_swing['avg']:.2f}%\n"
+        f"- 수익지수: {stats_swing['pf']:.2f} → {stats_swing['pf_eval']}\n\n"
+
+        f"📊 <b>전체 합산</b>\n"
+        f"- 총 거래 수: {stats_total['count']}\n"
+        f"- 승리: {stats_total['win']} | 패배: {stats_total['lose']}\n"
+        f"- 승률: {stats_total['win_rate']:.2f}%\n"
+        f"- 누적 손익률: {stats_total['total']:.2f}%\n"
+        f"- 거래당 평균 수익률: {stats_total['avg']:.2f}%\n"
+        f"- 수익지수: {stats_total['pf']:.2f} → {stats_total['pf_eval']}"
+    )
+
+    await update.message.reply_text(stats_message, parse_mode="HTML")
+    return ConversationHandler.END
     
 async def ai_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -358,68 +419,7 @@ async def ai_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id, f"🧠 AI 피드백\n\n{gpt_reply}", parse_mode="HTML")
     
     
-    # 단타
-    response = safe_supabase_call(
-        supabase.table("scalping_trades").select("pnl_pct").eq("user_id", user_id)
-    )
-    scalping_profits = [safe_float(row["pnl_pct"]) for row in response.data if row["pnl_pct"] is not None] if response else []
-    scalping_profits = [p for p in scalping_profits if p is not None]
-
-    response = safe_supabase_call(
-        supabase.table("swing_trades").select("pnl_pct, exit_price").eq("user_id", user_id)
-    )
-    swing_profits = [safe_float(row["pnl_pct"]) for row in response.data if row["pnl_pct"] is not None] if response else []
-    swing_profits = [p for p in swing_profits if p is not None]
-
-    closed_trades = sum(1 for row in (response.data if response else []) if row["exit_price"] is not None)
-    open_trades   = sum(1 for row in (response.data if response else []) if row["exit_price"] is None)
-
-    # 전체
-    all_profits = scalping_profits + swing_profits
-
-    if not all_profits:
-        await update.message.reply_text("📊 기록이 없습니다.")
-        return
-
-    # 통계 계산
-    stats_scalp = calc_stats(scalping_profits)
-    stats_swing = calc_stats(swing_profits)
-    stats_total = calc_stats(all_profits)
-
-    # 출력 메시지
-    stats_message = (
-        f"📊 <b>매매 통계</b>\n\n"
-
-        f"📓 <b>단타 거래</b>\n"
-        f"- 총 거래 수: {stats_scalp['count']}\n"
-        f"- 승리: {stats_scalp['win']} | 패배: {stats_scalp['lose']}\n"
-        f"- 승률: {stats_scalp['win_rate']:.2f}%\n"
-        f"- 누적 손익률: {stats_scalp['total']:.2f}%\n"
-        f"- 거래당 평균 수익률: {stats_scalp['avg']:.2f}%\n"
-        f"- 수익지수: {stats_scalp['pf']:.2f} → {stats_scalp['pf_eval']}\n\n"
-
-        f"🕰 <b>장기 거래</b>\n"
-        f"- 총 거래 수: {stats_swing['count']}\n"
-        f"- 청산된 거래: {closed_trades} | 미청산 거래: {open_trades}\n"
-        f"- 승리: {stats_swing['win']} | 패배: {stats_swing['lose']}\n"
-        f"- 승률: {stats_swing['win_rate']:.2f}%\n"
-        f"- 누적 손익률: {stats_swing['total']:.2f}%\n"
-        f"- 거래당 평균 수익률: {stats_swing['avg']:.2f}%\n"
-        f"- 수익지수: {stats_swing['pf']:.2f} → {stats_swing['pf_eval']}\n\n"
-
-        f"📊 <b>전체 합산</b>\n"
-        f"- 총 거래 수: {stats_total['count']}\n"
-        f"- 승리: {stats_total['win']} | 패배: {stats_total['lose']}\n"
-        f"- 승률: {stats_total['win_rate']:.2f}%\n"
-        f"- 누적 손익률: {stats_total['total']:.2f}%\n"
-        f"- 거래당 평균 수익률: {stats_total['avg']:.2f}%\n"
-        f"- 수익지수: {stats_total['pf']:.2f} → {stats_total['pf_eval']}"
-    )
-
-    await update.message.reply_text(stats_message, parse_mode="HTML")
-    return ConversationHandler.END
-
-    # =========================
+# =========================
 # 장기 매매일지
 # =========================
 async def swing_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1085,6 +1085,7 @@ async def sector_candle(request: Request):
             print(f"[icon] {symbol} 기준가(1D) 없음")
 
     return JSONResponse(content={"ok": True})
+
 
 
 
