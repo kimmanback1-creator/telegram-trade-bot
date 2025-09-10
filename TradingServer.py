@@ -977,34 +977,48 @@ async def send_top3_to_telegram(bot, category_id: str, coins: list):
 
 @app.post("/sector")
 async def sector_webhook(request: Request):
-    data = await request.json()
-    print(f"[Webhook Triggered] {datetime.now()} | data={data}")
-    symbol = data.get("symbol", "").upper()  
-    message = data.get("message") 
+    try:
+        raw_body = await request.body()
+        if not raw_body:
+            print(f"[Webhook Triggered] {datetime.now()} | ⚠️ Empty body")
+            return JSONResponse(content={"ok": False, "error": "Empty body"}, status_code=400)
+        try:
+            data = await request.json()
+        except Exception as e:
+            print(f"[Webhook Triggered] {datetime.now()} | ⚠️ JSON decode error: {e}, raw_body={raw_body}")
+            return JSONResponse(content={"ok": False, "error": "Invalid JSON"}, status_code=400)
 
-    if message == "UP":
+        print(f"[Webhook Triggered] {datetime.now()} | data={data}")
+        symbol = data.get("symbol", "").upper()  
+        message = data.get("message") 
+
+        if message == "UP":
         
-        mapping = {
-            "SOLANA.C": "solana-ecosystem",
-            "BNBCHAIN.C": "binance-smart-chain",
-            "ETHEREUM.C": "ethereum-ecosystem",
-            "STABLE.C": "stablecoins",
-            "STABLE.C.D": "stablecoins",
-            "LAYER1.C": "layer-1",
-            "DEPIN.C": "depin",
-            "MEME.C": "meme-token",
-            "EXCHANGES.C": "centralized-exchange-token-cex",
-            "AI.C": "artificial-intelligence",
-            "RWA.C": "real-world-assets-rwa",
-            "WORLDLIBERTY.C": "world-liberty-financial-portfolio",
-            "POLKADOT.C": "dot-ecosystem",
-        }
-        category_id = mapping.get(symbol)
-        if category_id:
-            coins = await get_top3_tokens(category_id)
-            await send_top3_to_telegram(telegram_app.bot, category_id, coins)
+            mapping = {
+                "SOLANA.C": "solana-ecosystem",
+                "BNBCHAIN.C": "binance-smart-chain",
+                "ETHEREUM.C": "ethereum-ecosystem",
+                "STABLE.C": "stablecoins",
+                "STABLE.C.D": "stablecoins",
+                "LAYER1.C": "layer-1",
+                "DEPIN.C": "depin",
+                "MEME.C": "meme-token",
+                "EXCHANGES.C": "centralized-exchange-token-cex",
+                "AI.C": "artificial-intelligence",
+                "RWA.C": "real-world-assets-rwa",
+                "WORLDLIBERTY.C": "world-liberty-financial-portfolio",
+                "POLKADOT.C": "dot-ecosystem",
+            }
+            category_id = mapping.get(symbol)
+            if category_id:
+                coins = await get_top3_tokens(category_id)
+                await send_top3_to_telegram(telegram_app.bot, category_id, coins)
 
-    return JSONResponse(content={"ok": True})
+        return JSONResponse(content={"ok": True})
+    
+    except Exception as e:
+        print(f"❌ sector_webhook error: {e}")
+        return JSONResponse(content={"ok": False, "error": str(e)}, status_code=500)
 
 SECTOR_NAME_MAP = {
     "SOLANA.C": "솔라나",
@@ -1114,6 +1128,7 @@ async def sector_candle(request: Request):
             print(f"[icon] {symbol} 기준가(1D) 없음")
 
     return JSONResponse(content={"ok": True})
+
 
 
 
