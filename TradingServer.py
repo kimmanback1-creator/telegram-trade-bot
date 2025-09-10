@@ -362,7 +362,9 @@ async def ai_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         for row in response_scalp.data:
             records.append({
                 "reason": row.get("reason"),
-                "pnl_pct": row.get("pnl_pct")
+                "pnl_pct": row.get("pnl_pct"),
+                "symbol": row.get("symbol"),
+                "side": row.get("side")
             })
 
     if response_swing and response_swing.data:
@@ -370,15 +372,20 @@ async def ai_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if row.get("reason_entry") and row.get("pnl_pct") is not None:
                 records.append({
                     "reason": row["reason_entry"],
-                    "pnl_pct": row["pnl_pct"]
+                    "pnl_pct": row["pnl_pct"],
+                    "symbol": row.get("symbol"),
+                    "side": row.get("side")
                 })
             if row.get("reason_exit") and row.get("pnl_pct") is not None:
                 records.append({
                     "reason": row["reason_exit"],
-                    "pnl_pct": row["pnl_pct"]
+                    "pnl_pct": row["pnl_pct"],
+                    "symbol": row.get("symbol"),
+                    "side": row.get("side")
                 })
 
     if not records:
+        await context.bot.delete_message(chat_id, processing_msg.message_id)
         await context.bot.send_message(chat_id, "피드백할 매매 기록이 없습니다.")
         return
         
@@ -420,6 +427,7 @@ async def ai_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
     except Exception as e:
         print("❌ GPT 호출 실패:", e)
+        await context.bot.delete_message(chat_id, processing_msg.message_id)
         await context.bot.send_message(chat_id, "⚠️ AI 피드백 생성에 실패했습니다.")
         return
 
@@ -1093,6 +1101,7 @@ async def sector_candle(request: Request):
             print(f"[icon] {symbol} 기준가(1D) 없음")
 
     return JSONResponse(content={"ok": True})
+
 
 
 
