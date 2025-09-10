@@ -343,7 +343,7 @@ async def ai_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     response_scalp = safe_supabase_call(
         supabase.table("scalping_trades")
-        .select("reason, pnl_pct")
+        .select("reason, pnl_pct, symbol, side")
         .eq("user_id", user_id)
         .order("created_at", desc=True)
         .limit(30)
@@ -351,7 +351,7 @@ async def ai_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     response_swing = safe_supabase_call(
         supabase.table("swing_trades")
-        .select("reason_entry, reason_exit, pnl_pct")
+        .select("reason_entry, reason_exit, pnl_pct, symbol, side")
         .eq("user_id", user_id)
         .order("trade_id", desc=True)   
         .limit(30)
@@ -395,7 +395,7 @@ async def ai_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
     for i, r in enumerate(records, 1):
-        prompt_text += f"[매매 {i}]\n"
+        prompt_text += f"[매매 {i}] ({r['symbol']} {r['side']})\n"
         prompt_text += f"- 진입 근거: {r['reason']}\n"
         prompt_text += f"- 손익률: {r['pnl_pct']}%\n\n"
 
@@ -1093,6 +1093,7 @@ async def sector_candle(request: Request):
             print(f"[icon] {symbol} 기준가(1D) 없음")
 
     return JSONResponse(content={"ok": True})
+
 
 
 
