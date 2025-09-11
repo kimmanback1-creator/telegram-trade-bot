@@ -365,7 +365,8 @@ async def ai_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "reason": row.get("reason"),
                 "pnl_pct": row.get("pnl_pct"),
                 "symbol": row.get("symbol"),
-                "side": row.get("side")
+                "side": row.get("side"),
+                "image_id": row.get("image_id")
             })
 
     if response_swing and response_swing.data:
@@ -445,6 +446,9 @@ async def ai_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     good_match = re.search(r"가장\s*좋은\s*매매\s*번호\s*:\s*(\d+)", gpt_reply)
     bad_match  = re.search(r"가장\s*나쁜\s*매매\s*번호\s*:\s*(\d+)", gpt_reply)
+    print("📊 전체 records:", records)
+    print("🎯 GPT good_match:", good_match.group(1) if good_match else None)
+    print("🎯 GPT bad_match:", bad_match.group(1) if bad_match else None)
     
     if good_match:
         good_num = int(good_match.group(1))
@@ -1158,6 +1162,7 @@ async def sector_candle(request: Request):
             print(f"[icon] {symbol} 기준가(1D) 없음")
 
     return JSONResponse(content={"ok": True})
+
 
 
 
