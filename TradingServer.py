@@ -392,18 +392,21 @@ async def ai_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
         
     prompt_text = (
-    "아래는 사용자의 최근 매매 기록입니다.\n"
-    "손익률(pnl_pct)이 양수면 성공한 매매, 음수면 실패한 매매입니다.\n"
-    "각 매매를 검토하고, 다음 항목을 중심으로 분석하세요:\n"
-    "1. 좋은 매매 습관 : 성공한 매매에서 나타난 장점.\n"
-    "2. 나쁜 매매 습관 : 실패한 매매에서 반복적으로 나타나는 문제.\n"
-    "3. 실질적인 개선 방안 : 앞으로 사용자가 바로 적용할 수 있는 구체적인 제안.\n"
-    "⚠️ 주의 : 심리분석이나 추상적인 이야기(예: 결단력 부족, 심리적 요인)는 최소화하고, "
-    "매매 근거와 손익률 데이터를 토대로 실제 매매 습관과 전략적 개선에 집중하세요.\n\n"
-    "분석 결과에서는 반드시 매매 번호와 함께 심볼과 사이드를 같이 언급하세요.\n"
-    "예: '매매 11 (BTC 롱)', '매매 14 (ETH 숏)'\n\n"
+        "아래는 사용자의 최근 매매 기록입니다.\n"
+        "손익률(pnl_pct)이 양수면 성공한 매매, 음수면 실패한 매매입니다.\n"
+        "각 매매를 검토하고, 다음 항목을 중심으로 분석하세요:\n"
+        "1. 좋은 매매 습관 : 성공한 매매에서 나타난 장점.\n"
+        "2. 나쁜 매매 습관 : 실패한 매매에서 반복적으로 나타나는 문제.\n"
+        "3. 실질적인 개선 방안 : 앞으로 사용자가 바로 적용할 수 있는 구체적인 제안.\n"
+        "⚠️ 주의 : 심리분석이나 추상적인 이야기(예: 결단력 부족, 심리적 요인)는 최소화하고, "
+        "매매 근거와 손익률 데이터를 토대로 실제 매매 습관과 전략적 개선에 집중하세요.\n\n"
+        "분석 결과에서는 반드시 매매 번호와 함께 심볼과 사이드를 같이 언급하세요.\n"
+        "예: '매매 11 (BTC 롱)', '매매 14 (ETH 숏)'\n\n"
+        "마지막에 반드시 아래 두 줄을 포함하세요:\n"
+        "- 가장 좋은 매매 번호: X\n"
+        "- 가장 나쁜 매매 번호: Y\n"
         
-)
+    )
 
 
     for i, r in enumerate(records, 1):
@@ -439,26 +442,30 @@ async def ai_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.delete_message(chat_id, processing_msg.message_id)
     await context.bot.send_message(chat_id, f"🧠 AI 피드백\n\n{gpt_reply}", parse_mode="HTML")
 
-    good_trades = [r for r in records if r["pnl_pct"] and r["pnl_pct"] > 0 and r.get("image_id")]
-    bad_trades  = [r for r in records if r["pnl_pct"] and r["pnl_pct"] < 0 and r.get("image_id")]
+    good_match = re.search(r"가장\s*좋은\s*매매\s*번호\s*:\s*(\d+)", gpt_reply)
+    bad_match  = re.search(r"가장\s*나쁜\s*매매\s*번호\s*:\s*(\d+)", gpt_reply)
+    
+    if good_match:
+        good_num = int(good_match.group(1))
+        if 0 < good_num <= len(records):
+            record = records[good_num-1]
+            if record.get("image_id"):
+                await context.bot.send_photo(
+                    chat_id,
+                    record["image_id"],
+                    caption=f"✅ GPT가 꼽은 가장 좋은 매매 {good_num}\n{record['symbol']} {record['side']} | PnL {record['pnl_pct']}%"
+                )
 
-    if good_trades:
-        await context.bot.send_message(chat_id, "✅ 좋은 매매 차트")
-        for t in good_trades[:1]:
-            await context.bot.send_photo(
-                chat_id,
-                t["image_id"],
-                caption=f"{t['symbol']} {t['side']} | PnL {t['pnl_pct']}%"
-            )
-
-    if bad_trades:
-        await context.bot.send_message(chat_id, "❌ 나쁜 매매 차트")
-        for t in bad_trades[:1]:
-            await context.bot.send_photo(
-                chat_id,
-                t["image_id"],
-                caption=f"{t['symbol']} {t['side']} | PnL {t['pnl_pct']}%"
-            )
+    if bad_match:
+        bad_num = int(bad_match.group(1))
+        if 0 < bad_num <= len(records):
+            record = records[bad_num-1]
+            if record.get("image_id"):
+                await context.bot.send_photo(
+                    chat_id,
+                    record["image_id"],
+                    caption=f"❌ GPT가 꼽은 가장 나쁜 매매 {bad_num}\n{record['symbol']} {record['side']} | PnL {record['pnl_pct']}%"
+                )
      
 # =========================
 # 장기 매매일지
@@ -1150,6 +1157,7 @@ async def sector_candle(request: Request):
             print(f"[icon] {symbol} 기준가(1D) 없음")
 
     return JSONResponse(content={"ok": True})
+
 
 
 
