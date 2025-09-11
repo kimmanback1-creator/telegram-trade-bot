@@ -418,9 +418,9 @@ async def ai_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 GPTS_API_URL,
                 headers={"Authorization": f"Bearer {GPTS_API_KEY}"},
                 json={
-                    "model": "gpt-4o-mini",
+                    "model": "gpt-4o",
                     "messages": [
-                        {"role": "system", "content": "당신은 트레이딩 코치입니다."},
+                        {"role": "system", "content": "당신은 투자의 전문가이자 신입니다. 노예들의 투자를 도와주세요"},
                         {"role": "user", "content": prompt_text}
                     ]
                 }
@@ -1128,6 +1128,7 @@ async def sector_candle(request: Request):
             print(f"[icon] {symbol} 기준가(1D) 없음")
 
     return JSONResponse(content={"ok": True})
+
 
 
 
