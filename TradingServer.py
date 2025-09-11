@@ -382,7 +382,7 @@ async def ai_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     "reason": row["reason_exit"],
                     "pnl_pct": row["pnl_pct"],
                     "symbol": row.get("symbol"),
-                    "side": row.get("side")
+                    "side": row.get("side"),
                     "image_id": row.get("image_id")
                 })
 
@@ -1150,6 +1150,7 @@ async def sector_candle(request: Request):
             print(f"[icon] {symbol} 기준가(1D) 없음")
 
     return JSONResponse(content={"ok": True})
+
 
 
 
