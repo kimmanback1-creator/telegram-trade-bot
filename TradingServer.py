@@ -182,7 +182,7 @@ async def get_reason(update: Update, context: ContextTypes.DEFAULT_TYPE):
     "reason": reason
 }).execute()
 
-    # 🔥 지금까지 봇이 보낸 안내 메시지들 싹 삭제
+    # 지금까지 봇이 보낸 안내 메시지들 싹 삭제
     for msg_id in context.user_data.get("bot_msgs", []):
         try:
             await context.bot.delete_message(update.effective_chat.id, msg_id)
@@ -343,7 +343,7 @@ async def ai_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     response_scalp = safe_supabase_call(
         supabase.table("scalping_trades")
-        .select("reason, pnl_pct, symbol, side")
+        .select("reason, pnl_pct, symbol, side, image_id")
         .eq("user_id", user_id)
         .order("created_at", desc=True)
         .limit(30)
@@ -351,7 +351,7 @@ async def ai_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     response_swing = safe_supabase_call(
         supabase.table("swing_trades")
-        .select("reason_entry, reason_exit, pnl_pct, symbol, side")
+        .select("reason_entry, reason_exit, pnl_pct, symbol, side, image_id")
         .eq("user_id", user_id)
         .order("trade_id", desc=True)   
         .limit(30)
@@ -374,7 +374,8 @@ async def ai_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     "reason": row["reason_entry"],
                     "pnl_pct": row["pnl_pct"],
                     "symbol": row.get("symbol"),
-                    "side": row.get("side")
+                    "side": row.get("side"),
+                    "image_id": row.get("image_id")
                 })
             if row.get("reason_exit") and row.get("pnl_pct") is not None:
                 records.append({
@@ -382,6 +383,7 @@ async def ai_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     "pnl_pct": row["pnl_pct"],
                     "symbol": row.get("symbol"),
                     "side": row.get("side")
+                    "image_id": row.get("image_id")
                 })
 
     if not records:
@@ -420,7 +422,7 @@ async def ai_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 json={
                     "model": "gpt-4o",
                     "messages": [
-                        {"role": "system", "content": "당신은 투자의 전문가이자 신입니다. 노예들의 투자를 도와주세요"},
+                        {"role": "system", "content": "당신은 투자의 전문가이자 신입니다. 노예들을 매우쳐서 투자를 도와주세요"},
                         {"role": "user", "content": prompt_text}
                     ]
                 }
@@ -436,8 +438,28 @@ async def ai_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await context.bot.delete_message(chat_id, processing_msg.message_id)
     await context.bot.send_message(chat_id, f"🧠 AI 피드백\n\n{gpt_reply}", parse_mode="HTML")
-    
-    
+
+    good_trades = [r for r in records if r["pnl_pct"] and r["pnl_pct"] > 0 and r.get("image_id")]
+    bad_trades  = [r for r in records if r["pnl_pct"] and r["pnl_pct"] < 0 and r.get("image_id")]
+
+    if good_trades:
+        await context.bot.send_message(chat_id, "✅ 좋은 매매 차트")
+        for t in good_trades[:1]:
+            await context.bot.send_photo(
+                chat_id,
+                t["image_id"],
+                caption=f"{t['symbol']} {t['side']} | PnL {t['pnl_pct']}%"
+            )
+
+    if bad_trades:
+        await context.bot.send_message(chat_id, "❌ 나쁜 매매 차트")
+        for t in bad_trades[:1]:
+            await context.bot.send_photo(
+                chat_id,
+                t["image_id"],
+                caption=f"{t['symbol']} {t['side']} | PnL {t['pnl_pct']}%"
+            )
+     
 # =========================
 # 장기 매매일지
 # =========================
@@ -1128,6 +1150,7 @@ async def sector_candle(request: Request):
             print(f"[icon] {symbol} 기준가(1D) 없음")
 
     return JSONResponse(content={"ok": True})
+
 
 
 
