@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 from reporting import send_report
 import random
 import httpx
+import re
 
 TOKEN = os.getenv("BOT_TOKEN")
 url = os.getenv("SUPABASE_URL")
@@ -1157,6 +1158,7 @@ async def sector_candle(request: Request):
             print(f"[icon] {symbol} 기준가(1D) 없음")
 
     return JSONResponse(content={"ok": True})
+
 
 
 
