@@ -46,7 +46,7 @@ def get_or_create_alias(user_id: int):
     return alias
 
 #전역 변수
-MAIN_MENU = [["📓 일지작성(단타)", "일지작성(장기)"], ["📊 통계보기", "❌ 취소", "🧠 AI 피드백"]]
+MAIN_MENU = [["Checklist", "📓 일지작성(단타)", "일지작성(장기)"], ["📊 통계보기", "❌ 취소", "🧠 AI 피드백"]]
 LONG_MENU = [["새 진입 기록", "청산하기"], ["❌ 취소 / 뒤로가기"]]
 
 # 단계 정의
@@ -471,7 +471,55 @@ async def ai_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     record["image_id"],
                     caption=f"❌ GPT가 꼽은 가장 나쁜 매매 {bad_num}\n{record['symbol']} {record['side']} | PnL {record['pnl_pct']}%"
                 )
-     
+
+
+async def show_checklist(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    response = safe_supabase_call(
+        supabase.table("checklists").select("slot, text").eq("user_id", user_id).order("slot")
+    )
+    rows = response.data if response else []
+    checklist = {row["slot"]: row["text"] for row in rows}
+    text = "📝 <b>체크리스트 (1~10)</b>\n\n"
+    for i in range(1, 11):
+        item = checklist.get(i, "✏️ (비어있음)")
+        text += f"{i}. {item}\n"
+    keyboard = [
+        [InlineKeyboardButton(str(i), callback_data=f"checklist_{i}")]
+        for i in range(1, 11)
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await update.message.reply_text(
+        "체크리스트를 조회합니다.\n각 번호를 클릭하면 수정할 수 있습니다.",
+        reply_markup=reply_markup,
+        parse_mode="HTML"
+    )
+
+async def checklist_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    slot = int(query.data.split("_")[1])
+    context.user_data["checklist_slot"] = slot
+    await query.edit_message_text(f"✏️ 체크리스트 {slot}번을 수정할 내용을 입력하세요:")
+
+async def save_checklist(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    slot = context.user_data.get("checklist_slot")
+    if not slot:
+        return
+    text = update.message.text
+    safe_supabase_call(
+        supabase.table("checklists").upsert({
+            "user_id": user_id,
+            "slot": slot,
+            "text": text
+        }, on_conflict="user_id,slot")
+    )
+
+    await update.message.reply_text(f"✅ 체크리스트 {slot}번이 저장되었습니다: {text}")
+    context.user_data["checklist_slot"] = None
+
 # =========================
 # 장기 매매일지
 # =========================
@@ -829,10 +877,13 @@ conv_long = ConversationHandler(
 )
 
 telegram_app.add_handler(CommandHandler("start", start))
+telegram_app.add_handler(MessageHandler(filters.Text(["Checklist"]), show_checklist))
 telegram_app.add_handler(MessageHandler(filters.Text(["📊 통계보기"]), show_statistics))
 telegram_app.add_handler(MessageHandler(filters.Text(["🧠 AI 피드백"]), ai_feedback))
+telegram_app.add_handler(CallbackQueryHandler(checklist_callback, pattern=r"^checklist_\d+$"))
 telegram_app.add_handler(conv_scalp)
 telegram_app.add_handler(conv_long)
+telegram_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, save_checklist))
 
 KST = ZoneInfo("Asia/Seoul")
 
