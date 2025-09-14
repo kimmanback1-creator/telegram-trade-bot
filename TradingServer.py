@@ -485,7 +485,13 @@ async def show_checklist(update: Update, context: ContextTypes.DEFAULT_TYPE):
         item = checklist.get(i, "✏️ (비어있음)")
         text += f"{i}. {item}\n"
     keyboard = [
-        [InlineKeyboardButton(str(i), callback_data=f"checklist_{i}")]
+        [
+            InlineKeyboardButton(
+                f"{i}. {checklist.get(i, '✏️ (비어있음)')}",
+            callback_data=f"checklist_{i}"
+            )
+        ]
+        
         for i in range(1, 11)
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -1213,6 +1219,7 @@ async def sector_candle(request: Request):
             print(f"[icon] {symbol} 기준가(1D) 없음")
 
     return JSONResponse(content={"ok": True})
+
 
 
 
