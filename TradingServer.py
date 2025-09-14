@@ -474,6 +474,13 @@ async def ai_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def show_checklist(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        await context.bot.delete_message(
+            chat_id=update.effective_chat.id,
+            message_id=update.message.message_id
+        )
+    except:
+        pass
     user_id = int(update.effective_user.id)
     response = safe_supabase_call(
         supabase.table("checklists").select("slot, text").eq("user_id", user_id).order("slot")
@@ -1232,6 +1239,7 @@ async def sector_candle(request: Request):
             print(f"[icon] {symbol} 기준가(1D) 없음")
 
     return JSONResponse(content={"ok": True})
+
 
 
 
