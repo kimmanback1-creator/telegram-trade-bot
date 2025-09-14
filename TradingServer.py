@@ -482,12 +482,12 @@ async def show_checklist(update: Update, context: ContextTypes.DEFAULT_TYPE):
     checklist = {int(row["slot"]): row["text"] for row in rows if row.get("slot") is not None}
     text = "📝 <b>체크리스트 (1~10)</b>\n\n"
     for i in range(1, 11):
-        item = checklist.get(i, "✏️ (비어있음)")
+        item = checklist.get(i, " Empty")
         text += f"{i}. {item}\n"
     keyboard = [
         [
             InlineKeyboardButton(
-                f"{i}. {checklist.get(i, '✏️ (비어있음)')}",
+                f"{i}. {checklist.get(i, ' Empty')}",
             callback_data=f"checklist_{i}"
             )
         ]
@@ -507,8 +507,9 @@ async def checklist_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
     await query.answer()
     slot = int(query.data.split("_")[1])
     context.user_data["checklist_slot"] = slot
-    await query.edit_message_text(f"✏️ 체크리스트 {slot}번을 수정할 내용을 입력하세요:")
-
+    msg = await query.message.reply_text(f"✏️ 체크리스트 {slot}번을 수정할 내용을 입력하세요:")
+    context.user_data["checklist_prompt_msg_id"] = msg.message_id
+    
 async def save_checklist(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = int(update.effective_user.id)
     slot = context.user_data.get("checklist_slot")
@@ -522,10 +523,22 @@ async def save_checklist(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "text": text
         }, on_conflict="user_id,slot")
     )
-
+    prompt_msg_id = context.user_data.get("checklist_prompt_msg_id")
+    if prompt_msg_id:
+        try:
+            await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=prompt_msg_id)
+        except:
+            pass
+    
+    # 사용자가 입력한 메시지 삭제
+    try:
+        await context.bot.delete_message(chat_id=update.effective_chat.id, message_id=update.message.message_id)
+    except:
+        pass
     await update.message.reply_text(f"✅ 체크리스트 {slot}번이 저장되었습니다: {text}")
     context.user_data["checklist_slot"] = None
-
+    context.user_data["checklist_prompt_msg_id"] = None
+    
 # =========================
 # 장기 매매일지
 # =========================
@@ -1219,6 +1232,7 @@ async def sector_candle(request: Request):
             print(f"[icon] {symbol} 기준가(1D) 없음")
 
     return JSONResponse(content={"ok": True})
+
 
 
 
