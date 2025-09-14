@@ -479,7 +479,7 @@ async def show_checklist(update: Update, context: ContextTypes.DEFAULT_TYPE):
         supabase.table("checklists").select("slot, text").eq("user_id", user_id).order("slot")
     )
     rows = response.data if response else []
-    checklist = {row["slot"]: row["text"] for row in rows}
+    checklist = {int(row["slot"]): row["text"] for row in rows if row.get("slot") is not None}
     text = "📝 <b>체크리스트 (1~10)</b>\n\n"
     for i in range(1, 11):
         item = checklist.get(i, "✏️ (비어있음)")
@@ -1213,6 +1213,7 @@ async def sector_candle(request: Request):
             print(f"[icon] {symbol} 기준가(1D) 없음")
 
     return JSONResponse(content={"ok": True})
+
 
 
 
